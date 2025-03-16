@@ -1,22 +1,26 @@
-// CPP
-#include <filesystem>           // Used for handling file paths and directories (std::filesystem::create_directories, std::filesystem::current_path)
-#include <iostream>             // Used for console input/output (std::cout, std::cerr)
-#include <fstream>              // Used for file writing and editing
+// C++ Standard Library
+#include <filesystem>           // File path and directory handling (create_directories, current_path)
+#include <algorithm>            // Utility algorithms (max)
+#include <iostream>             // Console input/output (cout, cerr)
+#include <fstream>              // File reading and writing
+#include <cstring>              // String manipulation (strlen)
+#include <vector>               // Dynamic array storage
+#include <array>                // Fixed-size data storage
 
-// SYSTEM
-#include <sys/ioctl.h>          // Used to get terminal width (ioctl, winsize struct)
-#include <unistd.h>             // Used for file and terminal operations (STDOUT_FILENO)
-#include <limits.h>             // Used for defining PATH_MAX (maximum file path length)
-#include <libgen.h>
+// System Libraries
+#include <sys/ioctl.h>          // Terminal width retrieval (ioctl, winsize)
+#include <unistd.h>             // File and terminal operations (STDOUT_FILENO)
+#include <limits.h>             // Path length limits (PATH_MAX)
+#include <libgen.h>             // Path manipulation (dirname)
 
-// EXTERNAL
-#include <cspice/SpiceUsr.h>    // CSPICE library for space navigation computations (SpiceDouble)
-#include <uWebSockets/App.h>    // uWebSockets for handling WebSockets and HTTP requests (uWS::App)
-#include <minizip/unzip.h>      // minizip for handling ZIP file extraction (unzFile, unzOpen, unzReadCurrentFile)
-#include <curl/curl.h>          // libcurl for network requests (curl_easy_init, curl_easy_cleanup)
+// External Libraries
+#include <minizip/unzip.h>      // ZIP extraction (unzFile, unzOpen, unzReadCurrentFile)
+#include <curl/curl.h>          // Network requests (file downloads, update checks)
 
-// PROJECT
-#include <data_manager.hpp>     // function declerations
+// Project Headers
+#include <data_manager.hpp>     // Project-specific functions
+
+
 
 unsigned int getTerminalWidth() {
     unsigned int width = 80;
@@ -26,7 +30,6 @@ unsigned int getTerminalWidth() {
     }
     return width;
 }
-
 std::string getDefaultSaveDir() {
     char exePath[PATH_MAX];
     ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
@@ -34,20 +37,16 @@ std::string getDefaultSaveDir() {
         perror("readlink");
         return "";
     }
-    exePath[len] = '\0';
-    std::string dirPath = dirname(exePath);
-    return dirname(const_cast<char*>(dirPath.c_str()));
+    exePath[len] = '\0';  // Null-terminate
+    return std::string(dirname(dirname(exePath)));  // Get the parent of the executable's directory
 }
 
 std::filesystem::path getExecutablePath() {
-    char path[PATH_MAX];
-    ssize_t count = readlink("/proc/self/exe", path, sizeof(path) - 1);
-    if (count != -1) {
-        path[count] = '\0';
-        return std::filesystem::path(path);
-    }
-    return {};
+    std::array<char, PATH_MAX> path{};
+    ssize_t count = readlink("/proc/self/exe", path.data(), path.size() - 1);
+    return (count != -1) ? std::filesystem::path(path.data()) : std::filesystem::path{};
 }
+
 
 // DOWNLOAD MANAGEMENT
 
@@ -67,17 +66,21 @@ std::string downloadUrlContent(const std::string& url) {
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeStringCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Follow redirects
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);        // Timeout after 10s
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
 
     CURLcode res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-        curl_easy_cleanup(curl);
-        throw std::runtime_error("CURL request failed: " + std::string(curl_easy_strerror(res)));
+    std::string result;
+    if (res == CURLE_OK) {
+        result = std::move(response);  // Avoid unnecessary copy
     }
 
     curl_easy_cleanup(curl);
-    return response;
+    if (res != CURLE_OK) {
+        throw std::runtime_error("CURL request failed: " + std::string(curl_easy_strerror(res)));
+    }
+
+    return result;
 }
 
 size_t writeCallback(void* ptr, size_t size, size_t nmemb, void* stream) {
@@ -87,13 +90,16 @@ size_t writeCallback(void* ptr, size_t size, size_t nmemb, void* stream) {
 }
 
 int progressCallback(void* ptr, curl_off_t total, curl_off_t now, curl_off_t, curl_off_t) {
-    if (total > 0) {
-        int width = getTerminalWidth()/2 - 20;  // Use half width of terminal for progress bar
-        int progress = static_cast<int>((now * width) / total);
-        std::cout << ((now/total == 1) ? "\r\033[2KFinished [" : "\r\033[2KProgress [") << std::string(progress, '#') << std::string(width - progress, '.')
-                  << "] " << std::fixed << std::setw(5) << std::setprecision(2) << (now * 100.0 / total) << "% ";
-        std::cout.flush();
-    }
+    if (total <= 0) return 0;
+
+    constexpr int padding = 20;
+    int width = getTerminalWidth() / 2 - padding;
+    int progress = static_cast<int>((now * width) / total);
+
+    std::cout << "\r\033[2K" << (now >= total ? "Finished [" : "Progress [")
+              << std::string(progress, '#') << std::string(width - progress, '.')
+              << "] " << std::fixed << std::setw(6) << std::setprecision(2) << (now * 100.0 / total) << "% " << std::flush;
+
     return 0;
 }
 
@@ -104,94 +110,110 @@ std::string getFilenameFromUrl(const std::string& url) {
 
 bool downloadFile(const std::string& url, const std::filesystem::path& saveDirectory) {
     std::cout << "Downloading: " << url << "\n";
-    std::filesystem::create_directories(saveDirectory);
-    std::string savePath = saveDirectory.string() + "/" + getFilenameFromUrl(url);
     
-    CURL* curl = curl_easy_init();
-    if (!curl) return false;
-    
-    std::ofstream file(savePath, std::ios::binary);
-    if (!file) {
-        std::cerr << "Failed to open file for writing: " << savePath << std::endl;
+    // Ensure directory exists
+    if (!std::filesystem::exists(saveDirectory) && !std::filesystem::create_directories(saveDirectory)) {
+        std::cerr << "Failed to create directory: " << saveDirectory << std::endl;
         return false;
     }
-    
+
+    std::string savePath = (saveDirectory / getFilenameFromUrl(url)).string();
+
+    // Use RAII for CURL and file handling
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        std::cerr << "Failed to initialize CURL\n";
+        return false;
+    }
+
+    std::ofstream file(savePath, std::ios::binary);
+    if (!file) {
+        std::cerr << "Failed to open file: " << savePath << std::endl;
+        curl_easy_cleanup(curl);
+        return false;
+    }
+
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &file);
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Handle redirects
+
     CURLcode res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
+    
     file.close();
-    
-    std::cout << "\n";  // Ensure a newline after progress bar
-    
+
     if (res != CURLE_OK) {
         std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
+        std::filesystem::remove(savePath); // Remove incomplete file
         return false;
     }
-    
+
+    std::cout << "\n";  // Newline after progress bar
     return true;
 }
+
 
 
 // ZIP MANAGEMENT
 
 void printZipProgressBar(int current, int total) {
-    if (total == 0) return;
-    int barWidth = getTerminalWidth() / 2 - 20;
-    float progress = (float)current / total;
-    int pos = barWidth * progress;
+    if (total <= 0) return; // Prevent division by zero
+    static int barWidth = std::max(10, (int)getTerminalWidth() / 2 - 20); // Cache bar width
 
-    std::cout << "\033[K\r";
-    std::cout << (progress != 1 ? "Progress [" : "Finished [");
-    for (int i = 0; i < barWidth; ++i) {
-        std::cout << (i <= pos ? "#" : ".");
-    }
-    std::cout << "] " << std::setw(3) << int(progress * 100.0) << "%" << std::flush;
+    float progress = static_cast<float>(current) / total;
+    int pos = static_cast<int>(barWidth * progress);
+
+    std::cout << "\033[K\r" << (progress < 1.0f ? "Progress [" : "Finished [")
+              << std::string(pos, '#') << std::string(barWidth - pos, '.') << "] "
+              << std::setw(3) << std::setprecision(2) << std::fixed << (progress * 100) << "% " << std::flush;
 }
 
+
 int extractFile(unzFile zip, const std::string& outputPath, int current, int total) {
-    char buffer[256 * 1024];
     unz_file_info fileInfo;
-    if (unzGetCurrentFileInfo(zip, &fileInfo, nullptr, 0, nullptr, 0, nullptr, 0) != UNZ_OK) {
+    char filename[PATH_MAX];
+
+    if (unzGetCurrentFileInfo(zip, &fileInfo, filename, sizeof(filename), nullptr, 0, nullptr, 0) != UNZ_OK) {
         std::cerr << "Failed to get file info." << std::endl;
         return -1;
     }
 
-    char filename[PATH_MAX];
-    if (unzGetCurrentFileInfo(zip, &fileInfo, filename, sizeof(filename), nullptr, 0, nullptr, 0) != UNZ_OK) {
-        std::cerr << "Failed to get filename." << std::endl;
+    std::filesystem::path fullPath = std::filesystem::path(outputPath) / filename;
+
+    if (filename[strlen(filename) - 1] == '/') {
+        std::filesystem::create_directories(fullPath);
+        return 0;  // No file extraction needed for directories
+    }
+
+    std::filesystem::create_directories(fullPath.parent_path());
+
+    if (unzOpenCurrentFile(zip) != UNZ_OK) {
+        std::cerr << "Failed to open file inside zip: " << filename << std::endl;
         return -1;
     }
 
-    std::string fullPath = (std::filesystem::path(outputPath) / filename).string();
-    if (filename[strlen(filename) - 1] == '/') {
-        std::filesystem::create_directories(fullPath);
-    } else {
-        std::filesystem::create_directories(std::filesystem::path(fullPath).parent_path());
-        if (unzOpenCurrentFile(zip) != UNZ_OK) {
-            std::cerr << "Failed to open file inside zip: " << filename << std::endl;
-            return -1;
-        }
-        FILE* outFile = fopen(fullPath.c_str(), "wb");
-        if (!outFile) {
-            std::cerr << "Failed to create output file: " << fullPath << std::endl;
-            unzCloseCurrentFile(zip);
-            return -1;
-        }
-        int bytesRead;
-        while ((bytesRead = unzReadCurrentFile(zip, buffer, sizeof(buffer))) > 0) {
-            fwrite(buffer, 1, bytesRead, outFile);
-        }
-        fclose(outFile);
+    std::ofstream outFile(fullPath, std::ios::binary);
+    if (!outFile) {
+        std::cerr << "Failed to create output file: " << fullPath << std::endl;
         unzCloseCurrentFile(zip);
+        return -1;
     }
+
+    std::vector<char> buffer(256 * 1024);
+    int bytesRead;
+    while ((bytesRead = unzReadCurrentFile(zip, buffer.data(), buffer.size())) > 0) {
+        outFile.write(buffer.data(), bytesRead);
+    }
+
+    unzCloseCurrentFile(zip);
     printZipProgressBar(current, total);
+
     return 0;
 }
+
 
 bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::path& saveDirectory) {
     std::cout << "Extracting " << zipFilePath << " to " << saveDirectory << std::endl;
@@ -202,9 +224,9 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
     }
 
     int fileCount = 0;
-    do {
-        ++fileCount;
-    } while (unzGoToNextFile(zip) == UNZ_OK);
+    do {++fileCount;}
+    while (unzGoToNextFile(zip) == UNZ_OK);
+
     if (unzGoToFirstFile(zip) != UNZ_OK) {
         std::cerr << "Failed to go to first file in zip." << std::endl;
         unzClose(zip);
@@ -226,56 +248,66 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
 
 // MOVE MANAGEMENT
 
-std::string removeFilenameExtension(const std::string& filename) {
-    size_t dotPos = filename.find_last_of('.');
-    if (dotPos == std::string::npos) {
-        return filename;  // No extension found
-    }
-    return filename.substr(0, dotPos);
+std::string removeFilenameExtension(std::string filename) {
+    size_t dotPos = filename.rfind('.');
+    return (dotPos == std::string::npos) ? filename : filename.erase(dotPos);
 }
 
-
 void replaceInFile(const std::filesystem::path& filePath, const std::string& target, const std::string& replacement) {
-    std::ifstream inFile(filePath);
+    std::ifstream inFile(filePath, std::ios::in);
     if (!inFile) {
         std::cerr << "Failed to open file: " << filePath << std::endl;
         return;
     }
 
-    std::string content((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
-    inFile.close();
-
-    size_t pos = 0;
-    while ((pos = content.find(target, pos)) != std::string::npos) {
-        content.replace(pos, target.length(), replacement);
-        pos += replacement.length();
-    }
-
-    std::ofstream outFile(filePath);
+    std::filesystem::path tempFile = filePath.string() + ".tmp";
+    std::ofstream outFile(tempFile, std::ios::out | std::ios::trunc);
     if (!outFile) {
-        std::cerr << "Failed to write to file: " << filePath << std::endl;
+        std::cerr << "Failed to create temporary file: " << tempFile << std::endl;
         return;
     }
 
-    outFile << content;
+    std::string line;
+    bool modified = false;
+
+    while (std::getline(inFile, line)) {
+        size_t pos = 0;
+        while ((pos = line.find(target, pos)) != std::string::npos) {
+            line.replace(pos, target.length(), replacement);
+            pos += replacement.length();
+            modified = true;
+        }
+        outFile << line << '\n';
+    }
+
+    inFile.close();
     outFile.close();
+
+    if (modified) {
+        std::filesystem::rename(tempFile, filePath);
+    } else {
+        std::filesystem::remove(tempFile);
+    }
 }
 
+
 bool updateMetaKernelPaths(const std::filesystem::path& mkDir, const std::filesystem::path& replacementPath) {
-    if (!std::filesystem::exists(mkDir) || !std::filesystem::is_directory(mkDir)) {
+    if (!std::filesystem::is_directory(mkDir)) {
         std::cerr << "Invalid directory: " << mkDir << std::endl;
         return false;
     }
 
-    std::string replacement = replacementPath.string();
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(mkDir)) {
-        if (std::filesystem::is_regular_file(entry.path())) {
+    const auto& replacement = replacementPath.native();
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(mkDir, std::filesystem::directory_options::skip_permission_denied)) {
+        if (entry.is_regular_file()) {
             replaceInFile(entry.path(), "..", replacement);
         }
     }
+
     std::cout << "MetaKernel paths updated successfully." << std::endl;
     return true;
 }
+
 
 std::string ensureTrailingSlash(const std::string& path) {
     if (!path.empty() && path.back() != '/') return path + '/';
@@ -284,27 +316,30 @@ std::string ensureTrailingSlash(const std::string& path) {
 
 bool replaceDirectory(const std::filesystem::path& source, const std::filesystem::path& target) {
     try {
-        // Ensure source exists
-        if (!std::filesystem::exists(source) || !std::filesystem::is_directory(source)) {
-            std::cerr << "Error: Source directory does not exist or is not a directory." << std::endl;
+        // Verify that the source directory exists
+        if (!std::filesystem::is_directory(source)) {
+            std::cerr << "Error: Source directory does not exist or is not a directory.\n";
             return false;
         }
 
-        // Remove target if it exists
-        if (std::filesystem::exists(target)) {
-            std::filesystem::remove_all(target);
+        // Remove the target directory if it exists
+        std::error_code ec;
+        std::filesystem::remove_all(target, ec);
+        if (ec) {
+            std::cerr << "Warning: Failed to remove target directory: " << ec.message() << "\n";
         }
 
-        // Move source to target location
+        // Move the source directory to the target location
         std::filesystem::rename(source, target);
-        std::cout << "Replaced " << target << " with " << source << std::endl;
+        std::cout << "Renamed: " << source << " to " << target << "\n";
         return true;
 
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << "\n";
         return false;
     }
 }
+
 
 // DATA_MANGER
 
@@ -316,31 +351,24 @@ std::string DataManager::getRemoteVersion() {
     return downloadUrlContent(versionUrl);
 }
 
-DataManager::DataManager() {
-    zipUrl = REMOTE_ARCHIVE_URL;
-    versionUrl = REMOTE_VERSION_URL;
+DataManager::DataManager() :
+    zipUrl(REMOTE_ARCHIVE_URL),
+    versionUrl(REMOTE_VERSION_URL),
+    localVersion(""),
+    exeDirectory(std::filesystem::path(getDefaultSaveDir())),
+    dataDirectory(exeDirectory / "data"),
+    heraDirectory(dataDirectory / "hera"),
+    heraTemporaryDirectory(dataDirectory / "HERA"),
+    kernelDirectory(heraDirectory / "kernels"),
+    tempMetaKernelDirectory(heraTemporaryDirectory / "kernels" / "mk"),
+    zipFile(dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl))) {}
 
-    localVersion = "";
-    
-    exeDirectory = std::filesystem::path(getDefaultSaveDir());
-    dataDirectory = exeDirectory / "data";
-    heraDirectory = dataDirectory / "hera";
-    heraTemporaryDirectory = dataDirectory / "HERA";
-
-    kernelDirectory = heraDirectory / "kernels";
-    tempMetaKernelDirectory = heraTemporaryDirectory / "kernels" / "mk";
-
-    zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl));
-
-}
 
 bool DataManager::isNewVersionAvailable() {
     std::string remoteVersion = getRemoteVersion();
-    if (localVersion != remoteVersion) {
-        localVersion = remoteVersion;
-        return true;
-    }
-    return false;
+    if (localVersion == remoteVersion) return false;
+    localVersion = remoteVersion;
+    return true;
 }
 
 bool DataManager::downloadZipFile() {
@@ -352,7 +380,6 @@ bool DataManager::unzipZipFile() {
 }
 
 bool DataManager::editTempMetaKernelFiles() {
-    return false;
     return updateMetaKernelPaths(tempMetaKernelDirectory, kernelDirectory);    
 }
 
@@ -361,16 +388,11 @@ bool DataManager::moveFolder() {
 }
 
 bool DataManager::deleteZipFile() {
-    if (!std::filesystem::exists(zipFile) || !std::filesystem::is_regular_file(zipFile)) {
-        std::cerr << "File not found: " << zipFile << std::endl;
+    std::error_code ec;
+    if (!std::filesystem::remove(zipFile, ec)) {
+        std::cerr << "Error deleting " << zipFile << ": " << ec.message() << std::endl;
         return false;
     }
-    if (std::filesystem::remove(zipFile)) {
-        std::cout << "Deleted: " << zipFile << std::endl;
-        return true;
-    }
-    else {
-        std::cerr << "Failed to delete: " << zipFile << std::endl;
-        return false;
-    }
+    std::cout << "Deleted: " << zipFile << std::endl;
+    return true;
 }
