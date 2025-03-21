@@ -29,13 +29,14 @@ const std::unordered_map<int32_t, std::string_view> objects = {
         // {-9102000, "MILANI_SPACECRAFT"}      // no such id
 };  // 8 celestial object, 3 binary asteroid system, 3 spacecraft = 14 objects
 
+/*
 const std::unordered_map<int32_t, std::string_view> heraCameras = {
     {-91500, "HERA_SMC"},
     {-91400, "HERA_HSH"},
     {-91200, "HERA_TIRI"},
     {-91120, "HERA_AFC-2"},
     {-91110, "HERA_AFC-1"}
-};
+};*/
 
 struct Vector {
     SpiceDouble x, y, z;
@@ -101,6 +102,7 @@ private:
 };
 
 void initSpiceCore();
+void deinitSpiceCore();
 std::string getBodyFixedFrameName(SpiceInt id);
 
 std::string utcTime(uint32_t utcTimestamp);
