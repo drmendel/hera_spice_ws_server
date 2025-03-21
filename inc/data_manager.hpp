@@ -40,7 +40,7 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
 // ─────────────────────────────────────────────
 // File & Directory Management
 // ─────────────────────────────────────────────
-std::string removeFilenameExtension(const std::string& filename);
+std::string removeFilenameExtension(std::string& filename);
 void replaceInFile(const std::filesystem::path& filePath, const std::string& target, const std::string& replacement);
 bool updateMetaKernelPaths(const std::filesystem::path& mkDir, const std::filesystem::path& replacementPath);
 std::string ensureTrailingSlash(const std::string& path);

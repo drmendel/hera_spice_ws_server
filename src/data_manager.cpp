@@ -248,7 +248,7 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
 
 // MOVE MANAGEMENT
 
-std::string removeFilenameExtension(std::string filename) {
+std::string removeFilenameExtension(std::string& filename) {
     size_t dotPos = filename.rfind('.');
     return (dotPos == std::string::npos) ? filename : filename.erase(dotPos);
 }
