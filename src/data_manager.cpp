@@ -23,7 +23,7 @@
 
 
 unsigned int getTerminalWidth() {
-    unsigned int width = 80;
+    unsigned int width = 40;
     struct winsize w;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) {
         width = w.ws_col;
@@ -94,8 +94,8 @@ int progressCallback(void* ptr, curl_off_t total, curl_off_t now, curl_off_t, cu
 
     constexpr int padding = 20;
     int width = getTerminalWidth() / 2 - padding;
+    width = std::max(5, width);
     int progress = static_cast<int>((now * width) / total);
-
     std::cout << "\r\033[2K" << (now >= total ? "Finished [" : "Progress [")
               << std::string(progress, '#') << std::string(width - progress, '.')
               << "] " << std::fixed << std::setw(6) << std::setprecision(2) << (now * 100.0 / total) << "% " << std::flush;
@@ -209,7 +209,7 @@ int extractFile(unzFile zip, const std::string& outputPath, int current, int tot
     }
 
     unzCloseCurrentFile(zip);
-    printZipProgressBar(current, total);
+    // printZipProgressBar(current, total);
 
     return 0;
 }
@@ -242,7 +242,7 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
     } while (unzGoToNextFile(zip) == UNZ_OK);
 
     unzClose(zip);
-    std::cout << "\n";
+    // std::cout << "\n";   // New line after progress bar
     return true;
 }
 
@@ -354,7 +354,8 @@ std::string DataManager::getRemoteVersion() {
 DataManager::DataManager() :
     zipUrl(REMOTE_ARCHIVE_URL),
     versionUrl(REMOTE_VERSION_URL),
-    localVersion(""),
+    localVersion("localVersion"),
+    remoteVersion("remoteVersion"),
     exeDirectory(std::filesystem::path(getDefaultSaveDir())),
     dataDirectory(exeDirectory / "data"),
     heraDirectory(dataDirectory / "hera"),
@@ -365,11 +366,14 @@ DataManager::DataManager() :
 
 
 bool DataManager::isNewVersionAvailable() {
-    std::string remoteVersion = getRemoteVersion();
-    if (localVersion == remoteVersion) return false;
-    localVersion = remoteVersion;
+    remoteVersion = getRemoteVersion();
+    if (localVersion == remoteVersion) {
+        std::cout << "No new kernel version available.\n";
+        return false;
+    }
+    std::cout << "New kernel version available.\n";
     return true;
-}
+}    
 
 bool DataManager::downloadZipFile() {
     return downloadFile(zipUrl, dataDirectory);
@@ -395,4 +399,8 @@ bool DataManager::deleteZipFile() {
     }
     std::cout << "Deleted: " << zipFile << std::endl;
     return true;
+}
+
+void DataManager::updateLocalVersion() {
+    localVersion = remoteVersion;
 }
