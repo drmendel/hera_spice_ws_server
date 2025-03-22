@@ -31,16 +31,21 @@ void signalSpiceDataUnavailable() {
     deinitSpiceCore();
 }
 
-void dataManagerWorker() {
+void dataManagerWorker(int hoursToWait) {
     DataManager dataManager;
     bool newVersionAvailable;
+
+    if(dataManager.getLocalVersion() !=  "default") {
+        initSpiceCore();
+        signalSpiceDataAvailable();
+    }
 
     while (true) {
         std::unique_lock<std::mutex> lock(versionMutex);
         
         // Wait until a new kernel version is available or thread shutdown requested
         newVersionAvailable = dataManager.isNewVersionAvailable();  // Only call once
-        versionCondition.wait_for(lock, std::chrono::seconds(5), [&]() {
+        versionCondition.wait_for(lock, std::chrono::hours(hoursToWait), [&]() {
             return !shouldDataManagerRun.load() || newVersionAvailable;
         });
 

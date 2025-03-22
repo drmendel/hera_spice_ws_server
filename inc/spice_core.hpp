@@ -66,15 +66,10 @@ private:
     bool loadState();
 };
 
-
-
-
-
-
 enum class MessageMode : uint8_t {
-    ALL_INSTANTANEOUS = 97,
-    ALL_LIGHT_TIME_ADJUSTED = 98,
-    ERROR = 99
+    ALL_INSTANTANEOUS = 'i',
+    ALL_LIGHT_TIME_ADJUSTED = 'l',
+    ERROR = 'e'
 };
 
 class Request {

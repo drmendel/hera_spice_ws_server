@@ -678,15 +678,22 @@ int main(void) {
 #include <atomic>
 
 int main(int argc, char* argv[]) {
-    // Checking if at least one argument is passed
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <port>" << std::endl;
-        return 1; // Exit if no arguments are provided
+    if (argc < 3) {
+        std::cerr << "Usage: " << argv[0] << " <port> <interval>\n";
+        std::cerr << "<port>    - The port number to run the server on.\n";
+        std::cerr << "<interval> - The interval (in hours) between kernel version checks.\n";
+        return 1;
     }
 
     int port = std::stoi(argv[1]);
+    int hoursToWait;
+    {
+        int tmp = std::stoi(argv[2]);
+        hoursToWait = tmp > 0 ? tmp : 1;
+    }
+    
     shouldDataManagerRun.store(true);
-    std::thread dataManagerThread(dataManagerWorker);
+    std::thread dataManagerThread(dataManagerWorker, hoursToWait);
     std::thread webSocketManagerThread(webSocketManagerWorker, port);
     webSocketManagerThread.detach();
 

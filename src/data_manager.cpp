@@ -343,18 +343,17 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 
 // DATA_MANGER
 
-std::string DataManager::getLocalVersion() {
+std::string DataManager::loadLocalVersion() {
     std::ifstream versionFile(versionFilePath);
-    if (!versionFile.is_open()) return "localVersion";
+    if (!versionFile.is_open()) return "default";
 
-    std::string version;
-    std::getline(versionFile, version);
+    std::getline(versionFile, localVersion);
     versionFile.close();
 
-    return version;
+    return localVersion;
 }
 
-std::string DataManager::getRemoteVersion() {
+std::string DataManager::loadRemoteVersion() {
     return downloadUrlContent(versionUrl);
 }
 
@@ -378,8 +377,12 @@ DataManager::DataManager() {
     versionFilePath = heraDirectory / "version";
 
     // Get versions
-    localVersion = getLocalVersion();
-    remoteVersion = getRemoteVersion();
+    localVersion = loadLocalVersion();
+    remoteVersion = loadRemoteVersion();
+}
+
+std::string DataManager::getLocalVersion() const {
+    return localVersion;
 }
 
 bool DataManager::isNewVersionAvailable() {

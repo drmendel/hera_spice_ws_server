@@ -19,7 +19,7 @@ void signalSpiceDataUnavailable();
  * If an update is available, downloads, extracts, and replaces the kernel files.  
  * Ensures thread-safe updates by signaling data availability changes.  
  */
-void dataManagerWorker();
+void dataManagerWorker(int hoursToWait);
 
 // ─────────────────────────────────────────────
 // uWebSocket Thread - WebSocketManager

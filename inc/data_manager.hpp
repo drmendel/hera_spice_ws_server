@@ -72,13 +72,14 @@ private:
     std::filesystem::path zipFile;
 
     // Version Management
-    std::string getLocalVersion();
-    std::string getRemoteVersion();
+    std::string loadLocalVersion();
+    std::string loadRemoteVersion();
 
 public:
     DataManager();
 
     // Core Operations
+    std::string getLocalVersion() const;
     bool isNewVersionAvailable();
     bool downloadZipFile();
     bool unzipZipFile();
