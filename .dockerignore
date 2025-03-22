@@ -1,0 +1,11 @@
+.vscode
+build
+data/data_manager_test.txt
+data/spice_core_test.txt
+data/websocket_test.png
+data/hera/misc
+.gitignore
+install_dependecies.sh
+LICENCE
+README.md
+*.bin
