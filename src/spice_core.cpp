@@ -117,7 +117,7 @@ int Request::writeMessage() {
     error |= writeData(mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED);
     if(!error) return 0;
     
-    message[5] = (uint8_t)MessageMode::ERROR;
+    message[4] = (uint8_t)MessageMode::ERROR;
     return -1;
 }
 
@@ -139,15 +139,6 @@ int Request::writeData(SpiceBoolean lightTimeAdjusted) {
     if((message.size() - size) <= 0) return 1;
     return 0;
 }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -335,16 +326,28 @@ static void printHeader(const std::string& binaryData) {
     uint8_t mode;
     std::memcpy(&mode, binaryData.data() + sizeof(uint32_t), sizeof(uint8_t));
 
+    int index = 0;
+    auto printInt = [&]() {
+        if (index + 4 > binaryData.size()) return;
+
+        for (size_t i = 0; i < 4; ++i, ++index) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0')
+                      << static_cast<int>(static_cast<unsigned char>(binaryData[index])) << " ";
+        }
+        std::cout << std::dec << std::setfill(' ');
+    };
+
     std::string line(41, '-'); // Box width
     std::cout << "\n" << line << "\n";
     std::cout << "|          " << std::setw(28) << std::left << "Header Information" << " |\n" << std::right;
     std::cout << line << "\n";
-    std::cout << "| UTC Time: " << " 0x "
-              << std::setw(8) << std::setfill('0') << std::hex << std::uppercase << utcTime
-              << " ( " << std::dec << std::setw(10) << utcTime << " ) |\n";
-    std::cout << "| Mode:     " << " 0x       "
-              << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << static_cast<int>(mode)
-              << " ( " << std::dec << std::setw(10) << std::setfill(' ') << static_cast<int>(mode) << " ) |\n";
+    std::cout << "| UTC Time: " << "0x ";
+    printInt();
+              // << std::setw(8) << std::setfill('0') << std::hex << std::uppercase << static_cast<uint32_t>(utcTime)
+    std::cout << "(" << std::setw(10) << static_cast<uint32_t>(utcTime) << ") |\n";
+    std::cout << "| Mode:    " << " 0x "
+              << std::setw(2) << std::left << std::setfill('0') << std::hex << std::uppercase << static_cast<int>(mode) << std::setfill(' ')
+              << std::setw(11) << std::right << " ("  << std::dec  << std::setw(10) << std::setfill(' ') << static_cast<int>(mode) << ") |\n";
 }
 
 void printRequest(const std::string& binaryData) {

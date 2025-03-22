@@ -72,9 +72,9 @@ private:
 
 
 enum class MessageMode : uint8_t {
-    ALL_INSTANTANEOUS,
-    ALL_LIGHT_TIME_ADJUSTED,
-    ERROR
+    ALL_INSTANTANEOUS = 97,
+    ALL_LIGHT_TIME_ADJUSTED = 98,
+    ERROR = 99
 };
 
 class Request {
