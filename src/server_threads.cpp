@@ -51,6 +51,7 @@ void dataManagerWorker() {
         dataManager.unzipZipFile();
         dataManager.deleteZipFile();
         dataManager.editTempMetaKernelFiles();
+        dataManager.editTempVersionFile();
 
         signalSpiceDataUnavailable();
         deinitSpiceCore();      
