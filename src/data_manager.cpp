@@ -344,29 +344,45 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 // DATA_MANGER
 
 std::string DataManager::getLocalVersion() {
-    return localVersion;
+    std::ifstream versionFile(versionFilePath);
+    if (!versionFile.is_open()) return "localVersion";
+
+    std::string version;
+    std::getline(versionFile, version);
+    versionFile.close();
+
+    return version;
 }
 
 std::string DataManager::getRemoteVersion() {
     return downloadUrlContent(versionUrl);
 }
 
-DataManager::DataManager() :
-    zipUrl(REMOTE_ARCHIVE_URL),
-    versionUrl(REMOTE_VERSION_URL),
-    localVersion("localVersion"),
-    remoteVersion("remoteVersion"),
-    exeDirectory(std::filesystem::path(getDefaultSaveDir())),
-    dataDirectory(exeDirectory / "data"),
-    heraDirectory(dataDirectory / "hera"),
-    heraTemporaryDirectory(dataDirectory / "HERA"),
-    kernelDirectory(heraDirectory / "kernels"),
-    tempMetaKernelDirectory(heraTemporaryDirectory / "kernels" / "mk"),
-    zipFile(dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl))) {}
+DataManager::DataManager() {
+    // Initialize URLs
+    zipUrl = REMOTE_ARCHIVE_URL;
+    versionUrl = REMOTE_VERSION_URL;
 
+    // Set up directories
+    exeDirectory = std::filesystem::path(getDefaultSaveDir());
+    dataDirectory = exeDirectory / "data";
+    heraDirectory = dataDirectory / "hera";
+    heraTemporaryDirectory = dataDirectory / "HERA";
+    kernelDirectory = heraDirectory / "kernels";
+    tempMetaKernelDirectory = heraTemporaryDirectory / "kernels" / "mk";
+
+    // Initialize zip file path
+    zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl));
+
+    // Set version file path
+    versionFilePath = heraDirectory / "version";
+
+    // Get versions
+    localVersion = getLocalVersion();
+    remoteVersion = getRemoteVersion();
+}
 
 bool DataManager::isNewVersionAvailable() {
-    remoteVersion = getRemoteVersion();
     if (localVersion == remoteVersion) {
         std::cout << "No new kernel version available.\n";
         return false;
@@ -386,6 +402,19 @@ bool DataManager::unzipZipFile() {
 bool DataManager::editTempMetaKernelFiles() {
     return updateMetaKernelPaths(tempMetaKernelDirectory, kernelDirectory);    
 }
+
+bool DataManager::editTempVersionFile() {
+    std::ofstream versionFile(heraTemporaryDirectory / "version");
+    if (!versionFile.is_open()) {
+        std::cerr << "No version file found." << std::endl;
+        return false;
+    }
+    versionFile << remoteVersion;
+    versionFile.close();
+    std::cout << "Updated temporary version file.\n";
+    return true;
+}
+
 
 bool DataManager::moveFolder() {
     return replaceDirectory(heraTemporaryDirectory, heraDirectory);

@@ -58,6 +58,7 @@ private:
     // Version Tracking
     std::string localVersion;
     std::string remoteVersion;
+    std::filesystem::path versionFilePath;
 
     // Directory Paths
     std::filesystem::path exeDirectory;
@@ -82,6 +83,7 @@ public:
     bool downloadZipFile();
     bool unzipZipFile();
     bool editTempMetaKernelFiles();
+    bool editTempVersionFile();               // the version file doesnt have the data for some reason
     bool moveFolder();
     bool deleteZipFile();
     void updateLocalVersion();
