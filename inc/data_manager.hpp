@@ -57,6 +57,7 @@ private:
 
     // Version Tracking
     std::string localVersion;
+    std::string remoteVersion;
 
     // Directory Paths
     std::filesystem::path exeDirectory;
@@ -83,6 +84,7 @@ public:
     bool editTempMetaKernelFiles();
     bool moveFolder();
     bool deleteZipFile();
+    void updateLocalVersion();
 };
 
 #endif // DATA_MANAGER_HPP
