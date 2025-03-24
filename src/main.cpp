@@ -677,6 +677,8 @@ int main(void) {
 #include <string>
 #include <atomic>
 
+bool shouldProgramRun = true;
+
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " <port> <interval>\n";
@@ -698,10 +700,14 @@ int main(int argc, char* argv[]) {
     webSocketManagerThread.detach();
 
     std::string command = "";
-    while (command != "exit") {
+    while (shouldProgramRun) {
         std::cout << "Type in \"exit\" to stop the program!" << std::endl;
         std::cin >> command;
+        if(command == "exit") break;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    // ctrl + c Should also stop it (change shouldProgramRun)
 
     shouldDataManagerRun.store(false);
     versionCondition.notify_all();
