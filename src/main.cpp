@@ -679,7 +679,6 @@ int main(void) {
 #include <utils.hpp>
 
 int main(int argc, char* argv[]) {
-    std::signal(SIGINT, handleSignal);
     std::signal(SIGTERM, handleSignal);
 
     if (argc < 3) {
@@ -712,7 +711,7 @@ int main(int argc, char* argv[]) {
     std::thread webSocketManagerThread(webSocketManagerWorker, port);
 
     std::string command;
-    while (command != "exit") {
+    while (command != "exit" && !shuttingDown.load()) {
         std::cin >> command;
         std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
