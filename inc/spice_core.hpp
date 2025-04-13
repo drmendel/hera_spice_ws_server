@@ -27,7 +27,7 @@ const std::unordered_map<int32_t, std::string_view> objects = {
     {-91000, "HERA_SPACECRAFT"},
         {-15513000, "JUVENTAS_SPACECRAFT"},
         {-9102000, "MILANI_SPACECRAFT"}      // no such id
-};  // 8 solorsystem body + 2 asteroid + 3 spacecraft = 13 objects
+};  // 8 solorsystem body + 3 asteroid + 3 spacecraft = 14 objects
 
 /*
 const std::unordered_map<int32_t, std::string_view> heraCameras = {

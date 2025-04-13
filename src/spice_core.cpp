@@ -114,7 +114,7 @@ bool ObjectData::loadState() {
 
 Request::Request(std::string_view incomingRequest) : request(incomingRequest) {    
     std::memcpy(&utcTimestamp, request.data(), sizeof(utcTimestamp)); // Read first 8 bytes (double)
-    this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]); // Read byte at index 4
+    this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]); // Read byte at index 8
     std::memcpy(&observerId, request.data() + sizeof(utcTimestamp) + sizeof(mode), sizeof(observerId));
     std::cout << "### OBSERVER ID: " << observerId << std::endl;
     this->setETime(utcTimestamp);
