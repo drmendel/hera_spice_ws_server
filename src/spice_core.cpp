@@ -45,23 +45,12 @@ bool ObjectData::loadState() {
     SpiceBoolean found = false;
     SpiceChar objectName[32];
     SpiceChar observerName[32];
-    //bodc2n_c(objectId, 32, objectName, &found);
-    //bodc2n_c(observerId, 32, observerName, &found);
-    //printf("Target ID: %i\nTarget Name:%s\nObserver ID:%i\nObserver Name:%s\n", objectId, objectName, observerId, observerName);
+    bodc2n_c(objectId, 32, objectName, &found);
+    bodc2n_c(observerId, 32, observerName, &found);
 
-    if(objectId == -9102000) {
-        spkezr_c("MILANI", et, "J2000", lightTimeAdjusted ? "LT+S" : "NONE", observerName, spiceState, &lt);
-        //printf("A");
-    }
-    else if(observerId == -9102000) 
-    {  
-        spkezr_c(objectName, et, "J2000", lightTimeAdjusted ? "LT+S" : "NONE", "MILANI", spiceState, &lt);
-        //printf("B");
-    }
-    else {
-        spkez_c(objectId, et, "J2000", lightTimeAdjusted ? "LT+S" : "NONE", observerId, spiceState, &lt);
-        //printf("C");
-    }
+    if(objectId == -9102000)        spkezr_c("MILANI", et, "J2000", lightTimeAdjusted ? "LT+S" : "NONE", observerName, spiceState, &lt);
+    else if(observerId == -9102000) spkezr_c(objectName, et, "J2000", lightTimeAdjusted ? "LT+S" : "NONE", "MILANI", spiceState, &lt);
+    else                            spkez_c(objectId, et, "J2000", lightTimeAdjusted ? "LT+S" : "NONE", observerId, spiceState, &lt);
     if (failed_c()) {
         reset_c();
         return (stateAvailable = false);
@@ -116,7 +105,6 @@ Request::Request(std::string_view incomingRequest) : request(incomingRequest) {
     std::memcpy(&utcTimestamp, request.data(), sizeof(utcTimestamp)); // Read first 8 bytes (double)
     this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]); // Read byte at index 8
     std::memcpy(&observerId, request.data() + sizeof(utcTimestamp) + sizeof(mode), sizeof(observerId));
-    std::cout << "### OBSERVER ID: " << observerId << std::endl;
     this->setETime(utcTimestamp);
     this->writeMessage();
 }
