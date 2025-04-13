@@ -106,6 +106,7 @@ Request::Request(std::string_view incomingRequest) : request(incomingRequest) {
     this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]); // Read byte at index 8
     std::memcpy(&observerId, request.data() + sizeof(utcTimestamp) + sizeof(mode), sizeof(observerId));
     this->setETime(utcTimestamp);
+    this->clearMessage();
     this->writeMessage();
 }
 std::string Request::getMessage() const {
