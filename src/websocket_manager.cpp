@@ -75,8 +75,6 @@ void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view 
 
     // Process the request once data is available
     Request request(message);
-    request.clearMessage();
-    request.writeMessage();
     printResponse(request.getMessage());
     ws->send(request.getMessage(), opCode);
 }

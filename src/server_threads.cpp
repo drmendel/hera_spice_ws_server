@@ -15,7 +15,6 @@ std::condition_variable versionCondition;
 std::atomic<bool> shouldDataManagerRun;
 
 void signalSpiceDataAvailable() {
-    initSpiceCore();
     {
         std::unique_lock<std::mutex> lock(spiceMutex);
         spiceDataAvailable = true;
