@@ -53,7 +53,7 @@ struct MotionState {
 
 class ObjectData {
 public:
-    ObjectData(SpiceDouble et, SpiceDouble objectId, SpiceInt observerId, bool lightTimeAdjusted = false);
+    ObjectData(SpiceDouble et, SpiceInt objectId, SpiceInt observerId, bool lightTimeAdjusted = false);
     void serializeToBinary(std::string& buffer) const;
 private:
     SpiceDouble et;
@@ -79,18 +79,18 @@ public:
     int writeMessage();                             // 0 succes, 1 writeHeader() failed, 2 writeData() failed, 3 - both failed
     std::string getMessage() const;                 // Return the binary response string
 private:
-    uint32_t utcTimestamp;                          // Request data
+    SpiceDouble utcTimestamp;                          // Request data
     MessageMode mode;                               // Request data
-    int32_t observerId;                             // Request data
+    SpiceInt observerId;                             // Request data
 
     SpiceDouble et;
 
     std::string_view request;                       // Incoming request
     std::string message;                            // Outgoing message
 
-    void setETime(uint32_t utcTimestamp);
+    void setETime(SpiceDouble utcTimestamp);
     void setMode(MessageMode mode);
-    void setObserverId(int32_t observerId);
+    void setObserverId(SpiceInt observerId);
     
     int writeHeader();                              // Writes the header to the message buffer: 0 success, 1 failiure
     int writeData(SpiceBoolean lightTimeAdjusted);  // Writes the data to the message buffer: 0 success, 1 failiure
@@ -100,12 +100,12 @@ void initSpiceCore();
 void deinitSpiceCore();
 std::string getBodyFixedFrameName(SpiceInt id);
 
-std::string utcTime(uint32_t utcTimestamp);
-SpiceDouble etTime(uint32_t utcTimestamp);
+std::string utcTime(SpiceDouble utcTimestamp);
+SpiceDouble etTime(SpiceDouble utcTimestamp);
 
 std::string getName(SpiceInt id);
 
-std::string createMessage(uint32_t utcTime, uint8_t mode, int32_t id);
+std::string createMessage(SpiceDouble utcTime, uint8_t mode, SpiceInt id);
 void printRequest(const std::string& binaryData);
 void printResponse(const std::string& binaryData);
 void printHex(const std::string& binaryData);
