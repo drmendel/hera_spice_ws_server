@@ -1,7 +1,12 @@
 #ifndef SERVER_THREADS_HPP
 #define SERVER_THREADS_HPP
 
+// C++ Standard Libraries
 #include <condition_variable>
+#include <csignal>
+
+// Project headers
+#include <websocket_manager.hpp>
 
 // ─────────────────────────────────────────────
 // SPICE Kernel Update Thread - DataManager
@@ -31,5 +36,16 @@ void dataManagerWorker(int hoursToWait);
  * Ensures thread-safe data access (spice kernels) and signaling.
  */
 void webSocketManagerWorker(int port);
+
+// ─────────────────────────────────────────────
+// Graceful Shutdown - stop worker threads
+// ─────────────────────────────────────────────
+
+extern std::atomic<bool> shuttingDown;
+extern std::mutex shutdownMutex;
+extern std::condition_variable shutdownCV;
+
+void gracefulShutdown();
+void handleSignal(int signal);
 
 #endif // SERVER_THREADS_HPP

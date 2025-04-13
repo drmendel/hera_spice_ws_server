@@ -19,7 +19,7 @@
 
 // Project Headers
 #include <data_manager.hpp>     // Project-specific functions
-
+#include <utils.hpp>
 
 
 unsigned int getTerminalWidth() {
@@ -177,7 +177,7 @@ int extractFile(unzFile zip, const std::string& outputPath, int current, int tot
     char filename[PATH_MAX];
 
     if (unzGetCurrentFileInfo(zip, &fileInfo, filename, sizeof(filename), nullptr, 0, nullptr, 0) != UNZ_OK) {
-        std::cerr << "Failed to get file info." << std::endl;
+        std::cerr << color("error") << "Failed to get file info." << std::endl;
         return -1;
     }
 
@@ -387,10 +387,10 @@ std::string DataManager::getLocalVersion() const {
 
 bool DataManager::isNewVersionAvailable() {
     if (localVersion == remoteVersion) {
-        std::cout << "No new kernel version available.\n";
+        std::cout << color("log") << "No new kernel version available.\n\n";
         return false;
     }
-    std::cout << "New kernel version available.\n";
+    std::cout << color("log") << "\nNew kernel version available.\n\n";
     return true;
 }    
 
@@ -409,12 +409,12 @@ bool DataManager::editTempMetaKernelFiles() {
 bool DataManager::editTempVersionFile() {
     std::ofstream versionFile(heraTemporaryDirectory / "version");
     if (!versionFile.is_open()) {
-        std::cerr << "No version file found." << std::endl;
+        std::cerr << color("log") << "No version file found." << std::endl;
         return false;
     }
     versionFile << remoteVersion;
     versionFile.close();
-    std::cout << "Updated temporary version file.\n";
+    std::cout << color("log") << "Updated temporary version file.\n";
     return true;
 }
 
@@ -426,10 +426,10 @@ bool DataManager::moveFolder() {
 bool DataManager::deleteZipFile() {
     std::error_code ec;
     if (!std::filesystem::remove(zipFile, ec)) {
-        std::cerr << "Error deleting " << zipFile << ": " << ec.message() << std::endl;
+        std::cerr << color("error") << "Error deleting " << zipFile << ": " << ec.message() << std::endl;
         return false;
     }
-    std::cout << "Deleted: " << zipFile << std::endl;
+    std::cout << color("log") << "Deleted: " << zipFile << std::endl;
     return true;
 }
 

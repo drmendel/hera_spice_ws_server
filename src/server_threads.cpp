@@ -4,6 +4,7 @@
 #include <spice_core.hpp>
 #include <server_threads.hpp>
 #include <websocket_manager.hpp>
+#include <utils.hpp>
 
 // ─────────────────────────────────────────────
 // SPICE Kernel Update Thread - DataManager
@@ -66,7 +67,6 @@ void dataManagerWorker(int hoursToWait) {
         
         dataManager.updateLocalVersion();
     }
-    std::cout << "DM Worker Stoped!" << std::endl;
 }
 
 // ─────────────────────────────────────────────
@@ -74,20 +74,44 @@ void dataManagerWorker(int hoursToWait) {
 // ─────────────────────────────────────────────
 
 void webSocketManagerWorker(int port) {
-    uWS::App app;
-    
-    app.ws<PerSocketData>("/", {
+    uWS::App threadApp;
+    loop = uWS::Loop::get();
+    threadApp.ws<PerSocketData>("/", {
         .open = onOpen,
         .message = onMessage,
         .close = onClose
     }).listen(port, [port](auto *token) {
+        listenSocket = token;
         if (token) {
-            std::cout << "Server listening on port " << port << std::endl;
+            std::cout << color("log") << "Server listening on port " << port << ".\n" << std::endl;
         } else {
-            std::cerr << "Failed to listen on port " << port << std::endl;
+            std::cerr << color("error") << "Failed to listen on port " << port << ".\n" << std::endl;
             exit(1);
         }
     });
-    
-    app.run();
+    app = &threadApp;
+    threadApp.run();
+}
+
+// ─────────────────────────────────────────────
+// Graceful Shutdown - stop worker threads
+// ─────────────────────────────────────────────
+
+std::atomic<bool> shuttingDown = false;
+std::mutex shutdownMutex;
+std::condition_variable shutdownCV;
+
+void gracefulShutdown() {
+    if (shuttingDown.exchange(true)) return;
+    shouldDataManagerRun.store(false);
+    versionCondition.notify_all();
+    shutdownServer();
+    shuttingDown.store(true);
+    shutdownCV.notify_all();
+}
+
+void handleSignal(int signal) {
+    if (signal == SIGTERM || signal == SIGINT) {
+        gracefulShutdown();
+    }
 }

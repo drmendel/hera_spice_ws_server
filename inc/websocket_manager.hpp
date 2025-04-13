@@ -55,9 +55,13 @@ void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view 
 void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, std::string_view message);
 
 // ─────────────────────────────────────────────
-// WebSocket Server Control
+// WebSocket Shutdown Control
 // ─────────────────────────────────────────────
 
-extern void webSocketManagerWorker(int port);
+extern uWS::App* app;
+extern uWS::Loop* loop;
+extern us_listen_socket_t* listenSocket;
+
+void shutdownServer();
 
 #endif // WEBSOCKET_MANAGER_HPP
