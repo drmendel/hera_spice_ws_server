@@ -678,6 +678,8 @@ int main(void) {
 #include <server_threads.hpp>
 #include <utils.hpp>
 
+bool shouldProgramRun = true;
+
 int main(int argc, char* argv[]) {
     std::signal(SIGTERM, handleSignal);
 
