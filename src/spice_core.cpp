@@ -182,13 +182,13 @@ int Request::writeData(SpiceBoolean lightTimeAdjusted) {
 void initSpiceCore() {
     std::filesystem::path operationalMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_ops.tm";
     std::filesystem::path planMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_plan.tm";
-    //std::filesystem::path studyMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_study_PO_EMA_2024.tm";
+    std::filesystem::path studyMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_study_PO_EMA_2024.tm";
     std::filesystem::path cremaMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_crema_2_1.tm";
-    furnsh_c(operationalMetakernel.c_str());
+
+    furnsh_c(studyMetakernel.c_str());
     furnsh_c(cremaMetakernel.c_str());
     furnsh_c(planMetakernel.c_str());
-    //furnsh_c(studyMetakernel.c_str());
-    
+    furnsh_c(operationalMetakernel.c_str());
 }
 
 void deinitSpiceCore() {
