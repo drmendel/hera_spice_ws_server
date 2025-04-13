@@ -1,8 +1,10 @@
-FROM ubuntu:latest
+FROM debian:bookworm-slim
 LABEL Description="Dockerfile for building and running a C++ application"
 
 # Installing dependencies
-RUN apt-get update && apt-get install git wget gzip ncompress \
+RUN apt-get update && apt-get install --no-install-recommends \
+    git wget gzip ncompress \
+    ca-certificates \
     build-essential cmake libssl-dev zlib1g-dev \
     libcurl4-openssl-dev \
     zlib1g-dev -y
