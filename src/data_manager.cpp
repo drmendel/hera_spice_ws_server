@@ -209,7 +209,7 @@ int extractFile(unzFile zip, const std::string& outputPath, int current, int tot
     }
 
     unzCloseCurrentFile(zip);
-    // printZipProgressBar(current, total);
+    printZipProgressBar(current, total);
 
     return 0;
 }
