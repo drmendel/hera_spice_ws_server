@@ -429,7 +429,7 @@ bool DataManager::deleteZipFile() {
         std::cerr << color("error") << "Error deleting " << zipFile << ": " << ec.message() << std::endl;
         return false;
     }
-    std::cout << color("log") << "Deleted: " << zipFile << std::endl;
+    std::cout << color("log") << "\nDeleted: " << zipFile << std::endl;
     return true;
 }
 
