@@ -72,19 +72,48 @@ void dataManagerWorker(int hoursToWait) {
 // uWebSocket Thread - WebSocketManager
 // ─────────────────────────────────────────────
 
-void webSocketManagerWorker(int port) {
-    uWS::App threadApp;
+std::mutex socketMutex;
+std::condition_variable socketCondition;
+std::atomic<bool> shouldWebSocketRun = true;
+
+#include <fstream>
+
+void webSocketManagerWorker(int port, const std::string& key, const std::string& cert, const std::string& pwd) {
+
+    std::cout << "KEY PATH: " << key << "\n";
+    std::cout << "CERT PATH: " << cert << "\n";
+    std::cout << "PWD: " << pwd << "\n";
+
+    std::ifstream k(key.c_str());
+    std::ifstream c(cert.c_str());
+
+    std::cout << "KEY readable: " << k.good() << ", CERT readable: " << c.good() << "\n";
+
+
+    uWS::SSLApp threadApp({
+        .key_file_name = key.c_str(),
+        .cert_file_name = cert.c_str(),
+        .passphrase = pwd.c_str()
+    });
     loop = uWS::Loop::get();
-    threadApp.ws<PerSocketData>("/", {
+    threadApp.ws<PerSocketData>("/*", {
+        .maxBackpressure = 100 * 1024 * 1024,
+        .closeOnBackpressureLimit = false,
+        .resetIdleTimeoutOnSend = false,
+        .sendPingsAutomatically = true,
+        
         .open = onOpen,
         .message = onMessage,
         .close = onClose
-    }).listen(port, [port](auto *token) {
-        listenSocket = token;
-        if (token) {
-            std::cout << color("log") << "Server listening on port " << port << ".\n" << std::endl;
+    }).listen(port, [port](auto *socket) {
+        listenSocket = socket;
+        if (socket) {
+            std::cout << color("log") << "Server listening on port " << port << ".\n" << color("reset") << std::endl;
         } else {
-            std::cerr << color("error") << "Failed to listen on port " << port << ".\n" << std::endl;
+            std::cerr << color("error") << "Failed to listen on port " << port << ".\n" << color("reset") << std::endl;
+            std::lock_guard<std::mutex> lock(shutdownMutex);
+            shouldWebSocketRun.store(false);
+            socketCondition.notify_all();
             exit(1);
         }
     });

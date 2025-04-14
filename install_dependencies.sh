@@ -32,14 +32,14 @@ sudo apt install build-essential cmake libssl-dev zlib1g-dev -y
 git clone --recurse-submodules https://github.com/uNetworking/uWebSockets.git
 
 cd uWebSockets/uSockets
-make
+WITH_OPENSSL=1 make
 # ar rvs uSockets.a *.o
 sudo cp uSockets.a /usr/local/lib/
 sudo cp src/libusockets.h /usr/local/include/
 
 cd ..
-make -j$(nproc)
-sudo make install
+WITH_OPENSSL=1 make -j$(nproc)
+sudo WITH_OPENSSL=1 make install
 
 cd ..
 rm -vr uWebSockets

@@ -50,18 +50,37 @@ struct PerSocketData {
 // WebSocket Event Handlers
 // ─────────────────────────────────────────────
 
-void onOpen(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws);
-void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view message, uWS::OpCode opCode);
-void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, std::string_view message);
+void onOpen(uWS::WebSocket<true, uWS::SERVER, PerSocketData> *ws);
+void onMessage(uWS::WebSocket<true, uWS::SERVER, PerSocketData> *ws, std::string_view message, uWS::OpCode opCode);
+void onClose(uWS::WebSocket<true, uWS::SERVER, PerSocketData> *ws, int code, std::string_view message);
 
 // ─────────────────────────────────────────────
 // WebSocket Shutdown Control
 // ─────────────────────────────────────────────
 
-extern uWS::App* app;
+extern uWS::SSLApp* app;
 extern uWS::Loop* loop;
 extern us_listen_socket_t* listenSocket;
 
 void shutdownServer();
+
+// ─────────────────────────────────────────────
+// WebSocket Server Options
+// ─────────────────────────────────────────────
+
+typedef class serverOptions{
+    int port;
+    int interval;
+    std::string key;
+    std::string cert;
+    std::string pwd;
+public:
+    const int getPort() const;
+    const int getInterval() const;
+    const std::string getKey() const;
+    const std::string getCert() const;
+    const std::string getPwd() const;
+    int load(int argc, char** argv);
+} serverOptions;
 
 #endif // WEBSOCKET_MANAGER_HPP

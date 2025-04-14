@@ -24,11 +24,11 @@ RUN wget https://naif.jpl.nasa.gov/pub/naif/toolkit//C/PC_Linux_GCC_64bit/packag
 # Installing websockets
 RUN git clone --recurse-submodules https://github.com/uNetworking/uWebSockets.git && \
     cd uWebSockets/uSockets && \
-    make && \
+    WITH_OPENSSL=1 make -j$(nproc) && \
     cp src/libusockets.h /usr/local/include && \
     cp uSockets.a /usr/local/lib && \
     cd .. && \
-    make -j$(nproc) && \
+    WITH_OPENSSL=1 make -j$(nproc) && \
     make install && \
     cd .. && \
     rm -vrf uWebSockets
@@ -45,20 +45,19 @@ RUN git clone https://github.com/nmoinvaz/minizip.git && \
     rm -vrf minizip && \
     ldconfig
 
-# Install image debugging tools
-RUN apt-get install tree ranger btop nano -y
-
 # Copy application files
-RUN mkdir -p /app/inc /app/src /app/data
+RUN mkdir -p /app/inc /app/src /app/data /app/certs
 WORKDIR /app/inc
 COPY inc/* .
 WORKDIR /app/src
 COPY src/* .
 WORKDIR /app
 COPY CMakeLists.txt .
+WORKDIR /app/certs
+RUN touch key.pem && cert.pem
 
 # Copy data files
-COPY data ./data
+# COPY data ./data
 
 # Build the application
 RUN mkdir -p /app/build
@@ -69,6 +68,8 @@ RUN cmake .. && make -j$(nproc)
 ENV PORT 8080
 ENV HOURS 24
 EXPOSE $PORT
+ENV KEY /app/certs/key.pem
+ENV CERT /app/certs/cert.pem
 
 # Run the application
-CMD sh -c "/app/build/hera_spice_websocket_server $PORT $HOURS"
+CMD sh -c "/app/build/hera_spice_websocket_server $PORT $HOURS $KEY $CERT $PASSPHRASE"

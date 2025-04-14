@@ -30,12 +30,16 @@ void dataManagerWorker(int hoursToWait);
 // uWebSocket Thread - WebSocketManager
 // ─────────────────────────────────────────────
 
+extern std::mutex socketMutex;
+extern std::condition_variable socketCondition;
+extern std::atomic<bool> shouldWebSocketRun;
+
 /*
  * WebSocket manager worker function that initializes and runs the WebSocket server.  
  * Listens on the specified port and handles client connections, messages, and disconnections.
  * Ensures thread-safe data access (spice kernels) and signaling.
  */
-void webSocketManagerWorker(int port);
+void webSocketManagerWorker(int port, const std::string& key, const std::string& cert, const std::string& pwd);
 
 // ─────────────────────────────────────────────
 // Graceful Shutdown - stop worker threads

@@ -678,43 +678,25 @@ int main(void) {
 #include <server_threads.hpp>
 #include <utils.hpp>
 
-bool shouldProgramRun = true;
-
 int main(int argc, char* argv[]) {
     std::signal(SIGTERM, handleSignal);
 
-    if (argc < 3) {
-        printUsage(argv);
-        return 1;
-    }
+    serverOptions options;
+    int error = options.load(argc, argv);
+    if(error != 0) return error;
 
     printTitle();
-    std::cout << color("info") << "\nType `exit` to stop the server!\n" << color("reset") << std::endl;
-
-    int port = 5900;
-    int hoursToWait = 24;
-    
-    try {
-        port = std::stoi(argv[1]);
-        int tmp = std::stoi(argv[2]);
-        hoursToWait = tmp > 0 ? tmp : 1;
-    } catch (const std::invalid_argument& e) {
-        std::cerr << color("error") << "Error: Port and interval must be valid integers.\n" << color("reset");
-        printUsage(argv);
-        return 1;
-    } catch (const std::out_of_range& e) {
-        std::cerr << color("error") << "Error: Port or interval value out of range.\n" << color("reset");
-        printUsage(argv);
-        return 1;
-    }
     
     shouldDataManagerRun.store(true);
-    std::thread dataManagerThread(dataManagerWorker, hoursToWait);
-    std::thread webSocketManagerThread(webSocketManagerWorker, port);
+    std::thread dataManagerThread(dataManagerWorker, options.getInterval());
+    std::thread webSocketManagerThread(webSocketManagerWorker, options.getPort(), options.getKey(), options.getCert(), options.getPwd());
 
     std::string command;
-    while (command != "exit" && !shuttingDown.load()) {
-        std::cin >> command;
+    bool condition = false;
+    while (true) {
+        condition = command != "exit" && !shuttingDown.load() && shouldWebSocketRun.load();
+        if(condition) std::cin >> command;
+        else break;
         std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 
