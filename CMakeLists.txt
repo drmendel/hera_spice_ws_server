@@ -62,7 +62,7 @@ add_executable(hera_spice_websocket_server ${SRC_FILES})
 target_include_directories(hera_spice_websocket_server PRIVATE ${CSPICE_INCLUDE_DIR} ${uWEBSOCKET_INCLUDE_DIR} inc)
 
 # Link libraries (CSPICE before system libs)
-target_link_libraries(hera_spice_websocket_server PRIVATE ${CSPICE_LIB} ${CSPLIB_LIB} m ${uWEBSOCKET_LIB} CURL::libcurl ${MINIZIP_LIB} OpenSSL::Crypto ZLIB::ZLIB)
+target_link_libraries(hera_spice_websocket_server PRIVATE ${CSPICE_LIB} ${CSPLIB_LIB} m ${uWEBSOCKET_LIB} CURL::libcurl ${MINIZIP_LIB} OpenSSL::Crypto ZLIB::ZLIB ssl crypto)
 
 # Install target
 install(TARGETS hera_spice_websocket_server DESTINATION bin)
