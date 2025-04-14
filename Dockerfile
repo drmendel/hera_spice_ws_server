@@ -58,7 +58,7 @@ WORKDIR /app
 COPY CMakeLists.txt .
 
 # Copy data files
-COPY data ./data
+# COPY data ./data
 
 # Build the application
 RUN mkdir -p /app/build
