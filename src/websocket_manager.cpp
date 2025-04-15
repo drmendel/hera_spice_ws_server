@@ -52,7 +52,7 @@ void onOpen(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws) {
         activeConnections.fetch_add(1, std::memory_order_relaxed);
 
         std::cout << color("connect") << "Client connected with ID:    [" << data->id << "]\n";
-        std::cout << color("reset") << "Active connections:          [" << activeConnections.load() << "]" << color("reset") << "\n\n";
+        std::cout << color("reset") << "Active connections:          [" << activeConnections.load() << "]" << color("reset") << "\n\n" << std::flush;
     }
     {
         std::lock_guard<std::mutex> lock(socketMutex);

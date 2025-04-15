@@ -331,7 +331,7 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 
         // Move the source directory to the target location
         std::filesystem::rename(source, target);
-        std::cout << "Renamed: " << source << " to " << target << "\n";
+        std::cout << "Renamed: " << source << " to " << target << "\n" << std::endl;
         return true;
 
     } catch (const std::exception& e) {
@@ -390,7 +390,7 @@ bool DataManager::isNewVersionAvailable() {
         std::cout << color("log") << "No new kernel version available.\n\n";
         return false;
     }
-    std::cout << color("log") << "\nNew kernel version available.\n\n";
+    std::cout << color("log") << "New kernel version available.\n\n";
     return true;
 }    
 
