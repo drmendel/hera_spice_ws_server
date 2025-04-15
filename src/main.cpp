@@ -681,17 +681,12 @@ int main(void) {
 bool shouldProgramRun = true;
 
 int main(int argc, char* argv[]) {
-    std::signal(SIGTERM, handleSignal);
-
     if (argc < 3) {
         printUsage(argv);
         return 1;
     }
 
-    printTitle();
-    std::cout << color("info") << "\nType `exit` to stop the server!\n" << color("reset") << std::endl;
-
-    int port = 5900;
+    int port = 8080;
     int hoursToWait = 24;
     
     try {
@@ -699,31 +694,33 @@ int main(int argc, char* argv[]) {
         int tmp = std::stoi(argv[2]);
         hoursToWait = tmp > 0 ? tmp : 1;
     } catch (const std::invalid_argument& e) {
-        std::cerr << color("error") << "Error: Port and interval must be valid integers.\n" << color("reset");
+        std::cerr << color("error") << "\nError: Port and interval must be valid integers.\n" << color("reset");
         printUsage(argv);
         return 1;
     } catch (const std::out_of_range& e) {
-        std::cerr << color("error") << "Error: Port or interval value out of range.\n" << color("reset");
+        std::cerr << color("error") << "\nError: Port or interval value out of range.\n" << color("reset");
         printUsage(argv);
         return 1;
     }
+
+    printTitle();
+    std::cout << color("info") << "\nType `exit` to stop the server!" << color("reset") << std::endl;
     
     shouldDataManagerRun.store(true);
     std::thread dataManagerThread(dataManagerWorker, hoursToWait);
     std::thread webSocketManagerThread(webSocketManagerWorker, port);
 
-    std::string command;
-    while (command != "exit" && !shuttingDown.load()) {
+    dataManagerPointer = &dataManagerThread;
+    webSocketManagerPointer = &webSocketManagerThread;
+
+    std::signal(SIGTERM, handleSignal);
+    
+    std::string command = "notExit";
+    while (!shuttingDown.load()) {
         std::cin >> command;
+        if (command == "exit") break;
         std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 
-    gracefulShutdown();
-
-    dataManagerThread.join();
-    webSocketManagerThread.join();
-    deinitSpiceCore();
-
-    std::cout << color("reset") << "\nServer stopped gracefully!\n";
-    return 0;
+    gracefulShutdown(dataManagerPointer, webSocketManagerPointer);
 }

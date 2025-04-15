@@ -100,17 +100,27 @@ std::atomic<bool> shuttingDown = false;
 std::mutex shutdownMutex;
 std::condition_variable shutdownCV;
 
-void gracefulShutdown() {
+std::thread* dataManagerPointer = nullptr;
+std::thread* webSocketManagerPointer = nullptr;
+
+void gracefulShutdown(std::thread* dataManagerPointer, std::thread* webSocketManagerPointer) {
     if (shuttingDown.exchange(true)) return;
     shouldDataManagerRun.store(false);
     versionCondition.notify_all();
     shutdownServer();
     shuttingDown.store(true);
     shutdownCV.notify_all();
+
+    if(dataManagerPointer->joinable()) dataManagerPointer->join();
+    if(webSocketManagerPointer->joinable()) webSocketManagerPointer->join();
+    deinitSpiceCore();
+
+    std::cout << color("reset") << "\nServer stopped gracefully!\n";
+    std::exit(0);
 }
 
 void handleSignal(int signal) {
     if (signal == SIGTERM || signal == SIGINT) {
-        gracefulShutdown();
+        gracefulShutdown(dataManagerPointer, webSocketManagerPointer);
     }
 }

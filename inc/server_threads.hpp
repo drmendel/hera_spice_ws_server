@@ -45,7 +45,10 @@ extern std::atomic<bool> shuttingDown;
 extern std::mutex shutdownMutex;
 extern std::condition_variable shutdownCV;
 
-void gracefulShutdown();
+extern std::thread* dataManagerPointer;
+extern std::thread* webSocketManagerPointer;
+
+void gracefulShutdown(std::thread* dataManagerPointer, std::thread* webSocketManagerPointer);
 void handleSignal(int signal);
 
 #endif // SERVER_THREADS_HPP
