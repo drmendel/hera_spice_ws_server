@@ -1,74 +1,53 @@
-FROM debian:bookworm-slim
-LABEL Description="Dockerfile for building and running a C++ application"
+# Stage 1: Build
+FROM alpine:latest AS builder
 
-# Installing dependencies
-RUN apt-get update && apt-get install --no-install-recommends \
-    git wget gzip ncompress \
-    ca-certificates \
-    build-essential cmake libssl-dev zlib1g-dev \
-    libcurl4-openssl-dev \
-    zlib1g-dev -y
+RUN apk add --no-cache g++ cmake make git openssl-dev zlib-dev curl-dev wget tar gzip zstd-dev
 
-# Installing cspice
+# CSPICE
 RUN wget https://naif.jpl.nasa.gov/pub/naif/toolkit//C/PC_Linux_GCC_64bit/packages/cspice.tar.Z && \
     tar -xvf cspice.tar.Z && \
-    rm cspice.tar.Z && \
-    cd cspice && \
     mkdir -p /usr/local/include/cspice && \
-    cp -r include/* /usr/local/include/cspice/ && \
+    cp -r cspice/include/* /usr/local/include/cspice/ && \
     mkdir -p /usr/local/lib/cspice && \
-    cp -r lib/* /usr/local/lib/cspice/ && \
-    cd .. && \
-    rm -vrf cspice
+    cp -r cspice/lib/* /usr/local/lib/cspice/ && \
+    rm -rf cspice*
 
-# Installing websockets
+# uWebSockets
 RUN git clone --recurse-submodules https://github.com/uNetworking/uWebSockets.git && \
-    cd uWebSockets/uSockets && \
-    make && \
+    cd uWebSockets/uSockets && make && \
     cp src/libusockets.h /usr/local/include && \
     cp uSockets.a /usr/local/lib && \
-    cd .. && \
-    make -j$(nproc) && \
-    make install && \
-    cd .. && \
-    rm -vrf uWebSockets
+    cd .. && make -j$(nproc) && make install && \
+    cd ../ && rm -rf uWebSockets
 
-# Installing minizip
+# minizip
 RUN git clone https://github.com/nmoinvaz/minizip.git && \
-    cd minizip && \
-    mkdir build && cd build && \
-    cmake .. && \
-    make -j$(nproc) && \  
-    make install && \
-    cd .. && \
-    cd .. && \
-    rm -vrf minizip && \
-    ldconfig
+    mkdir -p minizip/build && cd minizip/build && \
+    cmake .. && make -j$(nproc) && make install && \
+    cd ../.. && rm -rf minizip
 
-# Install image debugging tools
-RUN apt-get install tree ranger btop nano -y
-
-# Copy application files
-RUN mkdir -p /app/inc /app/src /app/data
-WORKDIR /app/inc
-COPY inc/* .
-WORKDIR /app/src
-COPY src/* .
+# App build
 WORKDIR /app
+COPY inc ./inc
+COPY src ./src
 COPY CMakeLists.txt .
+RUN cmake -B build -S . && cmake --build build -j$(nproc)
 
-# Copy data files
-# COPY data ./data
+# Stage 2: Final image
+FROM alpine:latest
 
-# Build the application
-RUN mkdir -p /app/build
-WORKDIR /app/build
-RUN cmake .. && make -j$(nproc)
+RUN apk add --no-cache libstdc++ openssl zlib curl  zstd-dev
 
-# Environment variables
+COPY --from=builder /usr/local/lib/cspice /usr/local/lib/cspice
+COPY --from=builder /usr/local/include/cspice /usr/local/include/cspice
+COPY --from=builder /usr/local/lib/libminizip.* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libcrypto* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libssl* /usr/local/lib/
+COPY --from=builder /usr/local/lib/uSockets.a /usr/local/lib/
+COPY --from=builder /app/build/hera_spice_websocket_server /app/hera_spice_websocket_server
+
 ENV PORT 8080
 ENV HOURS 24
 EXPOSE $PORT
 
-# Run the application
-CMD sh -c "/app/build/hera_spice_websocket_server $PORT $HOURS"
+CMD ["/app/hera_spice_websocket_server", "8080", "24"]

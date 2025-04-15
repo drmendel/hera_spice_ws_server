@@ -27,7 +27,7 @@ echo
 echo "############################## INSTALLING uWEBSOCKETS... 🌐 ##############################"
 sleep 0.5
 
-sudo apt install build-essential cmake libssl-dev zlib1g-dev -y
+sudo apt install build-essential cmake libssl-dev zlib1g-dev libzstd-dev -y
 
 git clone --recurse-submodules https://github.com/uNetworking/uWebSockets.git
 
