@@ -46,8 +46,8 @@ COPY --from=builder /usr/local/lib/libssl* /usr/local/lib/
 COPY --from=builder /usr/local/lib/uSockets.a /usr/local/lib/
 COPY --from=builder /app/build/hera_spice_websocket_server /app/hera_spice_websocket_server
 
-ENV PORT 443    # Default port for the server
-ENV TIME 1      # Default time interval for syncronization with remote database
+ENV PORT 443
+ENV HOURS 24
 EXPOSE $PORT
 
-CMD /app/hera_spice_websocket_server $PORT $TIME
+CMD /app/hera_spice_websocket_server $PORT $HOURS
