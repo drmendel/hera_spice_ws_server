@@ -53,7 +53,9 @@ void dataManagerWorker(int syncInterval) {
         if(!newVersionAvailable) continue;    // Continue if no new version available
 
         dataManager.downloadZipFile();
+        if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
         dataManager.unzipZipFile();
+        if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
         dataManager.deleteZipFile();
         dataManager.editTempMetaKernelFiles();
         dataManager.editTempVersionFile();
