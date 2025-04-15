@@ -686,13 +686,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int port = 8080;
-    int hoursToWait = 24;
+    int port;
+    int syncInterval;
     
     try {
         port = std::stoi(argv[1]);
         int tmp = std::stoi(argv[2]);
-        hoursToWait = tmp > 0 ? tmp : 1;
+        syncInterval = tmp > 0 ? tmp : 1;
     } catch (const std::invalid_argument& e) {
         std::cerr << color("error") << "\nError: Port and interval must be valid integers.\n" << color("reset");
         printUsage(argv);
@@ -707,7 +707,7 @@ int main(int argc, char* argv[]) {
     std::cout << color("info") << "\nType `exit` to stop the server!" << color("reset") << std::endl;
     
     shouldDataManagerRun.store(true);
-    std::thread dataManagerThread(dataManagerWorker, hoursToWait);
+    std::thread dataManagerThread(dataManagerWorker, syncInterval);
     std::thread webSocketManagerThread(webSocketManagerWorker, port);
 
     dataManagerPointer = &dataManagerThread;

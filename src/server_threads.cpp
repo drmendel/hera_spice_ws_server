@@ -31,7 +31,7 @@ void signalSpiceDataUnavailable() {
     deinitSpiceCore();
 }
 
-void dataManagerWorker(int hoursToWait) {
+void dataManagerWorker(int syncInterval) {
     DataManager dataManager;
     bool newVersionAvailable;
 
@@ -45,7 +45,7 @@ void dataManagerWorker(int hoursToWait) {
         
         // Wait until a new kernel version is available or thread shutdown requested
         newVersionAvailable = dataManager.isNewVersionAvailable();  // Only call once
-        versionCondition.wait_for(lock, std::chrono::hours(hoursToWait), [&]() {
+        versionCondition.wait_for(lock, std::chrono::hours(syncInterval), [&]() {
             return !shouldDataManagerRun.load() || newVersionAvailable;
         });
 
