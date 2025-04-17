@@ -46,7 +46,7 @@ COPY --from=builder /usr/local/lib/libssl* /usr/local/lib/
 COPY --from=builder /usr/local/lib/uSockets.a /usr/local/lib/
 COPY --from=builder /app/build/hera_spice_websocket_server /app/hera_spice_websocket_server
 
-ENV PORT 443
+ENV PORT 80
 ENV HOURS 24
 EXPOSE $PORT
 
