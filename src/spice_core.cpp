@@ -137,10 +137,15 @@ void Request::clearMessage() {
 int Request::writeMessage() {
     int error = 0;
     error |= writeHeader();
+    if(this->mode != MessageMode::ALL_INSTANTANEOUS && this->mode != MessageMode::ALL_LIGHT_TIME_ADJUSTED) {
+        message[8] = (uint8_t)MessageMode::ERROR;
+        error |= true;
+        return -1;
+    }
     error |= writeData(mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED);
     if(!error) return 0;
 
-    message[8] = (uint8_t)MessageMode::ERROR;
+    message[8] = (mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED) ? (uint8_t)MessageMode::ERROR_L : (uint8_t)MessageMode::ERROR_I;
 
     return -1;
 }
