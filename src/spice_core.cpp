@@ -74,7 +74,11 @@ bool ObjectData::loadState() {
     xf2rav_c(xform, rotationMatrix, angularVelocity);
     m2q_c(rotationMatrix, quaternion);
 
-    objectState.orientation = {quaternion[0], quaternion[1], quaternion[2], quaternion[3]};
+    /* 
+     * Spice quaternion order: w, x, y, z
+     * Three.js quaternion order: x, y, z, w
+     */
+    objectState.orientation = {quaternion[1], quaternion[2], quaternion[3], quaternion[0]};
     objectState.angularVelocity = {angularVelocity[0], angularVelocity[1], angularVelocity[2]};
 
     return (stateAvailable = true);

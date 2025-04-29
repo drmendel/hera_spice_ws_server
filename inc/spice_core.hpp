@@ -42,7 +42,7 @@ struct Vector {
     SpiceDouble x, y, z;
 };
 struct Quaternion {
-    SpiceDouble w, x, y, z;
+    SpiceDouble x, y, z, w;
 };
 struct MotionState {
     Vector position;
