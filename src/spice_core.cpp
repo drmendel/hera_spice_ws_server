@@ -194,10 +194,11 @@ void initSpiceCore() {
     std::filesystem::path studyMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_study_PO_EMA_2024.tm";
     std::filesystem::path cremaMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_crema_2_1.tm";
 
-    furnsh_c(studyMetakernel.c_str());
-    furnsh_c(cremaMetakernel.c_str());
-    furnsh_c(planMetakernel.c_str());
-    furnsh_c(operationalMetakernel.c_str());
+    // furnsh_c(studyMetakernel.c_str());
+
+    furnsh_c(cremaMetakernel.c_str());          // 2024-10-08   2027-03-02      movement is ok, no juventas, milani, no mars flyby
+    furnsh_c(operationalMetakernel.c_str());    // 2024-10-08   2026-10-27      accurate
+    furnsh_c(planMetakernel.c_str());           // 2024-10-08   2027-04-16      movement is ok, juventas, milani, too (similarity to ops)
 }
 
 void deinitSpiceCore() {
