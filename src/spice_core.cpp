@@ -62,8 +62,8 @@ bool ObjectData::loadState() {
     // Orientation and angular velocity
     SpiceDouble xform[6][6];
     SpiceDouble correctedET = lightTimeAdjusted ? et - lt : et;
-    if(objectId == -9102000) sxform_c("J2000", "MILANI_SPACECRAFT", correctedET, xform);
-    else sxform_c("J2000", bodyFixedFrame.c_str(), correctedET, xform);
+    if(objectId == -9102000) sxform_c("MILANI_SPACECRAFT", "J2000", correctedET, xform);
+    else sxform_c(bodyFixedFrame.c_str(), "J2000", correctedET, xform);
 
     if (failed_c()) {
         reset_c();
