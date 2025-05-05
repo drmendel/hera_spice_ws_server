@@ -39,6 +39,10 @@ bool ObjectData::loadState() {
     // Set error handling to return on error
     erract_c("SET", 6, (SpiceChar*)"RETURN");
 
+    #ifdef DOCKER
+        errdev_c("SET", 0, (SpiceChar *)"NULL");
+    #endif
+
     // Load position and velocity
     SpiceDouble spiceState[6], lt;
 

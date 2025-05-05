@@ -5,6 +5,10 @@ project(hera_spice_websocket_server)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(DOCKER)
+    add_definitions(-DDOCKER)
+endif()
+
 # ############################################## CSPICE ##############################################
 
 # Specify CSPICE installation path if needed

@@ -136,8 +136,12 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &file);
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+
+    #ifndef DOCKER
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    #endif
+
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Handle redirects
 
     CURLcode res = curl_easy_perform(curl);
@@ -209,7 +213,10 @@ int extractFile(unzFile zip, const std::string& outputPath, int current, int tot
     }
 
     unzCloseCurrentFile(zip);
-    printZipProgressBar(current, total);
+
+    #ifndef DOCKER
+        printZipProgressBar(current, total);
+    #endif
 
     return 0;
 }

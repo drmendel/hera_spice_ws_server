@@ -31,7 +31,7 @@ WORKDIR /app
 COPY inc ./inc
 COPY src ./src
 COPY CMakeLists.txt .
-RUN cmake -B build -S . && cmake --build build -j$(nproc)
+RUN cmake -B build -S . -DDOCKER && cmake --build build -j$(nproc)
 
 # Stage 2: Final image
 FROM alpine:latest
