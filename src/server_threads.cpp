@@ -77,7 +77,7 @@ void dataManagerWorker(int syncInterval) {
 void webSocketManagerWorker(int port) {
     uWS::App threadApp;
     loop = uWS::Loop::get();
-    threadApp.ws<PerSocketData>("/", {
+    threadApp.ws<PerSocketData>("/ws/", {
         .open = onOpen,
         .message = onMessage,
         .close = onClose
