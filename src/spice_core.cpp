@@ -52,8 +52,6 @@ bool ObjectData::loadState() {
     bodc2n_c(objectId, 32, objectName, &found);
     bodc2n_c(observerId, 32, observerName, &found);
 
-    std::cout << "Bool resutl: " << (objectId == observerId ? "TRUE" : "FALSE") << std::endl;
-
     if(objectId == -9102000)        spkezr_c("MILANI", et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT") : "NONE", observerName, spiceState, &lt);
     else if(observerId == -9102000) spkezr_c(objectName, et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT") : "NONE", "MILANI", spiceState, &lt);
     else                            spkez_c(objectId, et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT") : "NONE", observerId, spiceState, &lt);
