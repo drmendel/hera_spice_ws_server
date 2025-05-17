@@ -45,14 +45,14 @@ void dataManagerWorker(int syncInterval) {
         
         // Wait until a new kernel version is available or thread shutdown requested
         newVersionAvailable = dataManager.isNewVersionAvailable();  // Only call once
-        versionCondition.wait_for(lock, std::chrono::hours(syncInterval), [&]() {
-            return !shouldDataManagerRun.load() || newVersionAvailable;
+        versionCondition.wait_for(lock, std::chrono::seconds(syncInterval), [&]() {
+            return !shouldDataManagerRun.load();
         });
 
         if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
         if(!newVersionAvailable) continue;    // Continue if no new version available
 
-        dataManager.downloadZipFile();
+        if(!dataManager.downloadZipFile()) continue;
         if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
         dataManager.unzipZipFile();
         if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested

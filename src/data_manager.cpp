@@ -77,7 +77,7 @@ std::string downloadUrlContent(const std::string& url) {
 
     curl_easy_cleanup(curl);
     if (res != CURLE_OK) {
-        throw std::runtime_error("CURL request failed: " + std::string(curl_easy_strerror(res)));
+        std::cerr << color("error") << "CURL request failed: " + std::string(curl_easy_strerror(res)) << color("default") << std::endl;
     }
 
     return result;
@@ -150,7 +150,7 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
     file.close();
 
     if (res != CURLE_OK) {
-        std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
+        std::cerr << color("error") << "CURL error: " << curl_easy_strerror(res) << std::endl;
         std::filesystem::remove(savePath); // Remove incomplete file
         return false;
     }
@@ -325,7 +325,7 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
     try {
         // Verify that the source directory exists
         if (!std::filesystem::is_directory(source)) {
-            std::cerr << "Error: Source directory does not exist or is not a directory.\n";
+            std::cerr << color("error") << "Error: Source directory does not exist or is not a directory.\n";
             return false;
         }
 
@@ -416,7 +416,7 @@ bool DataManager::editTempMetaKernelFiles() {
 bool DataManager::editTempVersionFile() {
     std::ofstream versionFile(heraTemporaryDirectory / "version");
     if (!versionFile.is_open()) {
-        std::cerr << color("log") << "No version file found." << std::endl;
+        std::cerr << color("error") << "No version file found." << std::endl;
         return false;
     }
     versionFile << remoteVersion;
