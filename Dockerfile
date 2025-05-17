@@ -47,7 +47,7 @@ COPY --from=builder /usr/local/lib/uSockets.a /usr/local/lib/
 COPY --from=builder /app/build/hera_spice_websocket_server /app/hera_spice_websocket_server
 
 ENV PORT 80
-ENV SYNC_INTERVAL 1
+ENV SYNC_INTERVAL 3600
 EXPOSE $PORT
 
 CMD /app/hera_spice_websocket_server $PORT $SYNC_INTERVAL
