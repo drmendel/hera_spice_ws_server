@@ -18,18 +18,22 @@
 #include <curl/curl.h>          // Network requests (file downloads, update checks)
 
 // Project Headers
-#include <data_manager.hpp>     // Project-specific functions
-#include <utils.hpp>
+#include <data_manager.hpp>     // DataManager class and function definitions
+#include <utils.hpp>            // Utility function (color)
 
+
+
+// ─────────────────────────────────────────────
+// System Utility Functions
+// ─────────────────────────────────────────────
 
 unsigned int getTerminalWidth() {
     unsigned int width = 40;
     struct winsize w;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) {
-        width = w.ws_col;
-    }
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) width = w.ws_col;
     return width;
 }
+
 std::string getDefaultSaveDir() {
     char exePath[PATH_MAX];
     ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
@@ -37,7 +41,7 @@ std::string getDefaultSaveDir() {
         perror("readlink");
         return "";
     }
-    exePath[len] = '\0';  // Null-terminate
+    exePath[len] = '\0';  // Null-terminate the string
     return std::string(dirname(dirname(exePath)));  // Get the parent of the executable's directory
 }
 
@@ -48,7 +52,10 @@ std::filesystem::path getExecutablePath() {
 }
 
 
-// DOWNLOAD MANAGEMENT
+
+// ─────────────────────────────────────────────
+// Download Management
+// ─────────────────────────────────────────────
 
 size_t writeStringCallback(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t totalSize = size * nmemb;
@@ -58,9 +65,7 @@ size_t writeStringCallback(void* contents, size_t size, size_t nmemb, std::strin
 
 std::string downloadUrlContent(const std::string& url) {
     CURL* curl = curl_easy_init();
-    if (!curl) {
-        throw std::runtime_error("Failed to initialize CURL");
-    }
+    if (!curl) throw std::runtime_error("Failed to initialize CURL");
 
     std::string response;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -69,16 +74,11 @@ std::string downloadUrlContent(const std::string& url) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
 
-    CURLcode res = curl_easy_perform(curl);
+    CURLcode code = curl_easy_perform(curl);
     std::string result;
-    if (res == CURLE_OK) {
-        result = std::move(response);  // Avoid unnecessary copy
-    }
-
+    if (code == CURLE_OK) result = std::move(response);
+    else std::cerr << color("error") << "CURL request failed: " + std::string(curl_easy_strerror(code)) << color("default") << std::endl;
     curl_easy_cleanup(curl);
-    if (res != CURLE_OK) {
-        std::cerr << color("error") << "CURL request failed: " + std::string(curl_easy_strerror(res)) << color("default") << std::endl;
-    }
 
     return result;
 }
@@ -96,7 +96,7 @@ int progressCallback(void* ptr, curl_off_t total, curl_off_t now, curl_off_t, cu
     int width = getTerminalWidth() / 2 - padding;
     width = std::max(5, width);
     int progress = static_cast<int>((now * width) / total);
-    std::cout << "\r\033[2K" << (now >= total ? "Finished [" : "Progress [")
+    std::cout << color("log") << "\r\033[2K" << (now >= total ? "Finished [" : "Progress [")
               << std::string(progress, '#') << std::string(width - progress, '.')
               << "] " << std::fixed << std::setw(6) << std::setprecision(2) << (now * 100.0 / total) << "% " << std::flush;
 
@@ -109,26 +109,24 @@ std::string getFilenameFromUrl(const std::string& url) {
 }
 
 bool downloadFile(const std::string& url, const std::filesystem::path& saveDirectory) {
-    std::cout << "Downloading: " << url << "\n";
+    std::cout << color("log") << "Downloading: " << url << "\n";
     
-    // Ensure directory exists
     if (!std::filesystem::exists(saveDirectory) && !std::filesystem::create_directories(saveDirectory)) {
-        std::cerr << "Failed to create directory: " << saveDirectory << std::endl;
+        std::cerr << color("error") << "Failed to create directory: " << saveDirectory << std::endl;
         return false;
     }
 
     std::string savePath = (saveDirectory / getFilenameFromUrl(url)).string();
 
-    // Use RAII for CURL and file handling
     CURL* curl = curl_easy_init();
     if (!curl) {
-        std::cerr << "Failed to initialize CURL\n";
+        std::cerr << color("error") << "Failed to initialize CURL\n";
         return false;
     }
 
     std::ofstream file(savePath, std::ios::binary);
     if (!file) {
-        std::cerr << "Failed to open file: " << savePath << std::endl;
+        std::cerr << color("error") << "Failed to open file: " << savePath << std::endl;
         curl_easy_cleanup(curl);
         return false;
     }
@@ -136,13 +134,12 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &file);
-
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Handle redirects
+    
     #ifndef DOCKER
         curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     #endif
-
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Handle redirects
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
@@ -151,17 +148,19 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
 
     if (res != CURLE_OK) {
         std::cerr << color("error") << "CURL error: " << curl_easy_strerror(res) << std::endl;
-        std::filesystem::remove(savePath); // Remove incomplete file
+        std::filesystem::remove(savePath);
         return false;
     }
 
-    std::cout << "\n";  // Newline after progress bar
+    std::cout << "\n";
     return true;
 }
 
 
 
-// ZIP MANAGEMENT
+// ─────────────────────────────────────────────
+// Unzip Management
+// ─────────────────────────────────────────────
 
 void printZipProgressBar(int current, int total) {
     if (total <= 0) return; // Prevent division by zero
@@ -170,11 +169,10 @@ void printZipProgressBar(int current, int total) {
     float progress = static_cast<float>(current) / total;
     int pos = static_cast<int>(barWidth * progress);
 
-    std::cout << "\033[K\r" << (progress < 1.0f ? "Progress [" : "Finished [")
+    std::cout << color("log") << "\033[K\r" << (progress < 1.0f ? "Progress [" : "Finished [")
               << std::string(pos, '#') << std::string(barWidth - pos, '.') << "] "
               << std::setw(3) << std::setprecision(2) << std::fixed << (progress * 100) << "% " << std::flush;
 }
-
 
 int extractFile(unzFile zip, const std::string& outputPath, int current, int total) {
     unz_file_info fileInfo;
@@ -189,19 +187,19 @@ int extractFile(unzFile zip, const std::string& outputPath, int current, int tot
 
     if (filename[strlen(filename) - 1] == '/') {
         std::filesystem::create_directories(fullPath);
-        return 0;  // No file extraction needed for directories
+        return 0;
     }
 
     std::filesystem::create_directories(fullPath.parent_path());
 
     if (unzOpenCurrentFile(zip) != UNZ_OK) {
-        std::cerr << "Failed to open file inside zip: " << filename << std::endl;
+        std::cerr << color("error") << "Failed to open file inside zip: " << filename << std::endl;
         return -1;
     }
 
     std::ofstream outFile(fullPath, std::ios::binary);
     if (!outFile) {
-        std::cerr << "Failed to create output file: " << fullPath << std::endl;
+        std::cerr << color("error") << "Failed to create output file: " << fullPath << std::endl;
         unzCloseCurrentFile(zip);
         return -1;
     }
@@ -221,12 +219,11 @@ int extractFile(unzFile zip, const std::string& outputPath, int current, int tot
     return 0;
 }
 
-
 bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::path& saveDirectory) {
-    std::cout << "Extracting " << zipFilePath << " to " << saveDirectory << std::endl;
+    std::cout << color("log") << "Extracting " << zipFilePath << " to " << saveDirectory << std::endl;
     unzFile zip = unzOpen(zipFilePath.string().c_str());
     if (!zip) {
-        std::cerr << "Failed to open zip file: " << zipFilePath << std::endl;
+        std::cerr << color("error") << "Failed to open zip file: " << zipFilePath << std::endl;
         return false;
     }
 
@@ -235,7 +232,7 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
     while (unzGoToNextFile(zip) == UNZ_OK);
 
     if (unzGoToFirstFile(zip) != UNZ_OK) {
-        std::cerr << "Failed to go to first file in zip." << std::endl;
+        std::cerr << color("error") << "Failed to go to first file in zip." << std::endl;
         unzClose(zip);
         return false;
     }
@@ -243,17 +240,20 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
     int extracted = 0;
     do {
         if (extractFile(zip, saveDirectory, ++extracted, fileCount) != 0) {
-            std::cerr << "Error extracting a file." << std::endl;
+            std::cerr << color("error") << "Error extracting a file." << std::endl;
             break;
         }
     } while (unzGoToNextFile(zip) == UNZ_OK);
 
     unzClose(zip);
-    // std::cout << "\n";   // New line after progress bar
     return true;
 }
 
-// MOVE MANAGEMENT
+
+
+// ─────────────────────────────────────────────
+// File & Directory Management
+// ─────────────────────────────────────────────
 
 std::string removeFilenameExtension(std::string& filename) {
     size_t dotPos = filename.rfind('.');
@@ -263,14 +263,14 @@ std::string removeFilenameExtension(std::string& filename) {
 void replaceInFile(const std::filesystem::path& filePath, const std::string& target, const std::string& replacement) {
     std::ifstream inFile(filePath, std::ios::in);
     if (!inFile) {
-        std::cerr << "Failed to open file: " << filePath << std::endl;
+        std::cerr << color("error") << "Failed to open file: " << filePath << std::endl;
         return;
     }
 
     std::filesystem::path tempFile = filePath.string() + ".tmp";
     std::ofstream outFile(tempFile, std::ios::out | std::ios::trunc);
     if (!outFile) {
-        std::cerr << "Failed to create temporary file: " << tempFile << std::endl;
+        std::cerr << color("error") << "Failed to create temporary file: " << tempFile << std::endl;
         return;
     }
 
@@ -290,17 +290,13 @@ void replaceInFile(const std::filesystem::path& filePath, const std::string& tar
     inFile.close();
     outFile.close();
 
-    if (modified) {
-        std::filesystem::rename(tempFile, filePath);
-    } else {
-        std::filesystem::remove(tempFile);
-    }
+    if (modified) std::filesystem::rename(tempFile, filePath);
+    else std::filesystem::remove(tempFile);
 }
-
 
 bool updateMetaKernelPaths(const std::filesystem::path& mkDir, const std::filesystem::path& replacementPath) {
     if (!std::filesystem::is_directory(mkDir)) {
-        std::cerr << "Invalid directory: " << mkDir << std::endl;
+        std::cerr << color("error") << "Invalid directory: " << mkDir << std::endl;
         return false;
     }
 
@@ -311,10 +307,9 @@ bool updateMetaKernelPaths(const std::filesystem::path& mkDir, const std::filesy
         }
     }
 
-    std::cout << "MetaKernel paths updated successfully." << std::endl;
+    std::cout << color("log") << "MetaKernel paths updated successfully." << std::endl;
     return true;
 }
-
 
 std::string ensureTrailingSlash(const std::string& path) {
     if (!path.empty() && path.back() != '/') return path + '/';
@@ -323,32 +318,30 @@ std::string ensureTrailingSlash(const std::string& path) {
 
 bool replaceDirectory(const std::filesystem::path& source, const std::filesystem::path& target) {
     try {
-        // Verify that the source directory exists
         if (!std::filesystem::is_directory(source)) {
             std::cerr << color("error") << "Error: Source directory does not exist or is not a directory.\n";
             return false;
         }
 
-        // Remove the target directory if it exists
         std::error_code ec;
         std::filesystem::remove_all(target, ec);
-        if (ec) {
-            std::cerr << "Warning: Failed to remove target directory: " << ec.message() << "\n";
-        }
-
-        // Move the source directory to the target location
+        if (ec) std::cerr << color("warn") << "Warning: Failed to remove target directory: " << ec.message() << "\n";
+        
         std::filesystem::rename(source, target);
-        std::cout << "Renamed: " << source << " to " << target << "\n" << std::endl;
+        std::cout << color("log") << "Renamed: " << source << " to " << target << "\n" << std::endl;
         return true;
-
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
+    }
+    catch (const std::exception& e) {
+        std::cerr << color("error") << "Error: " << e.what() << "\n";
         return false;
     }
 }
 
 
-// DATA_MANGER
+
+// ─────────────────────────────────────────────
+// DataManager Class
+// ─────────────────────────────────────────────
 
 std::string DataManager::loadLocalVersion() {
     std::ifstream versionFile(versionFilePath);
@@ -364,12 +357,11 @@ std::string DataManager::loadRemoteVersion() {
     return downloadUrlContent(versionUrl);
 }
 
+
 DataManager::DataManager() {
-    // Initialize URLs
     zipUrl = REMOTE_ARCHIVE_URL;
     versionUrl = REMOTE_VERSION_URL;
 
-    // Set up directories
     exeDirectory = std::filesystem::path(getDefaultSaveDir());
     dataDirectory = exeDirectory / "data";
     heraDirectory = dataDirectory / "hera";
@@ -377,16 +369,14 @@ DataManager::DataManager() {
     kernelDirectory = heraDirectory / "kernels";
     tempMetaKernelDirectory = heraTemporaryDirectory / "kernels" / "mk";
 
-    // Initialize zip file path
     zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl));
 
-    // Set version file path
     versionFilePath = heraDirectory / "version";
 
-    // Get versions
     localVersion = loadLocalVersion();
     remoteVersion = loadRemoteVersion();
 }
+
 
 std::string DataManager::getLocalVersion() const {
     return localVersion;
@@ -424,7 +414,6 @@ bool DataManager::editTempVersionFile() {
     std::cout << color("log") << "Updated temporary version file.\n";
     return true;
 }
-
 
 bool DataManager::moveFolder() {
     return replaceDirectory(heraTemporaryDirectory, heraDirectory);

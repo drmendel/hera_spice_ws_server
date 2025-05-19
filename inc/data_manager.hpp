@@ -1,11 +1,11 @@
 #ifndef DATA_MANAGER_HPP
 #define DATA_MANAGER_HPP
 
-// C++ Standard Library
-#include <iostream>
+// C++ Standard Libraries
+#include <string>
 #include <filesystem>
 
-// System Libraries
+// External Libraries
 #include <curl/curl.h>
 #include <minizip/unzip.h>
 
@@ -17,6 +17,7 @@
 // System Utility Functions
 // ─────────────────────────────────────────────
 unsigned int getTerminalWidth();
+std::string getDefaultSaveDir();
 std::filesystem::path getExecutablePath();
 
 // ─────────────────────────────────────────────
@@ -26,7 +27,6 @@ size_t writeStringCallback(void* contents, size_t size, size_t nmemb, std::strin
 std::string downloadUrlContent(const std::string& url);
 size_t writeCallback(void* ptr, size_t size, size_t nmemb, void* stream);
 int progressCallback(void* ptr, curl_off_t total, curl_off_t now, curl_off_t, curl_off_t);
-std::string getDefaultSaveDir();
 std::string getFilenameFromUrl(const std::string& url);
 bool downloadFile(const std::string& url, const std::filesystem::path& saveDirectory);
 
@@ -61,33 +61,33 @@ private:
     std::filesystem::path versionFilePath;
 
     // Directory Paths
-    std::filesystem::path exeDirectory;
-    std::filesystem::path dataDirectory;
-    std::filesystem::path heraDirectory;
-    std::filesystem::path heraTemporaryDirectory;
+    std::filesystem::path exeDirectory;                 // Directory where the executable is located (build)
+    std::filesystem::path dataDirectory;                // Data directory (where the zip file - HERA.zip - is downloaded
+    std::filesystem::path heraDirectory;                // Main Hera directory (data is used from here)
+    std::filesystem::path heraTemporaryDirectory;       // Temporary directory for unzipping (HERA)
     std::filesystem::path kernelDirectory;              // Active kernel directory (referenced in meta-kernel files)
     std::filesystem::path tempMetaKernelDirectory;      // Temporary directory for modifying meta-kernel paths
 
     // File Paths
-    std::filesystem::path zipFile;
+    std::filesystem::path zipFile;                      // Path to the downloaded zip file (HERA.zip)
 
     // Version Management
-    std::string loadLocalVersion();
-    std::string loadRemoteVersion();
+    std::string loadLocalVersion();                     // Load the local version from the version file
+    std::string loadRemoteVersion();                    // Load the remote version from the URL
 
 public:
     DataManager();
 
     // Core Operations
-    std::string getLocalVersion() const;
-    bool isNewVersionAvailable();
-    bool downloadZipFile();
-    bool unzipZipFile();
-    bool editTempMetaKernelFiles();
-    bool editTempVersionFile();               // the version file doesnt have the data for some reason
-    bool moveFolder();
-    bool deleteZipFile();
-    void updateLocalVersion();
+    std::string getLocalVersion() const;                // Get the local version from memory
+    bool isNewVersionAvailable();                       // Check if a new version is available
+    bool downloadZipFile();                             // Download the zip file from the URL  
+    bool unzipZipFile();                                // Unzip the downloaded zip file
+    bool editTempMetaKernelFiles();                     // Edit the temporary meta-kernel files ('..' -> 'actual/kernel/path') 
+    bool editTempVersionFile();                         // Edit the temporary version file (update the version file in the new directory)
+    bool moveFolder();                                  // Move the unzipped folder to the data directory   
+    bool deleteZipFile();                               // Delete the downloaded zip file
+    void updateLocalVersion();                          // Update the local version in the memory to the new version
 };
 
 #endif // DATA_MANAGER_HPP
