@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <csignal>
 
-// Project headers
+// Project Headers
 #include <websocket_manager.hpp>
 
 // ─────────────────────────────────────────────
@@ -20,9 +20,9 @@ void signalSpiceDataAvailable();
 void signalSpiceDataUnavailable();
 
 /*  
- * Periodically checks for a new Hera kernel version every 24 hours.  
- * If an update is available, downloads, extracts, and replaces the kernel files.  
- * Ensures thread-safe updates by signaling data availability changes.  
+ * Periodically checks for a new Hera kernel version every 'hoursToWait' hours.  
+ * If an update is available, downloads, extracts, modifies and replaces the kernel files.  
+ * Ensures thread-safe updates by signaling data availability changes.
  */
 void dataManagerWorker(int hoursToWait);
 
@@ -33,7 +33,7 @@ void dataManagerWorker(int hoursToWait);
 /*
  * WebSocket manager worker function that initializes and runs the WebSocket server.  
  * Listens on the specified port and handles client connections, messages, and disconnections.
- * Ensures thread-safe data access (spice kernels) and signaling.
+ * Ensures thread-safe data access to spice kernel files.
  */
 void webSocketManagerWorker(int port);
 

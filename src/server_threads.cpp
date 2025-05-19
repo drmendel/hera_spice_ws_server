@@ -1,10 +1,14 @@
+// C++ Standard Libraries
 #include <condition_variable>
 
+// Project Headers
+#include <websocket_manager.hpp>
+#include <server_threads.hpp>
 #include <data_manager.hpp>
 #include <spice_core.hpp>
-#include <server_threads.hpp>
-#include <websocket_manager.hpp>
 #include <utils.hpp>
+
+
 
 // ─────────────────────────────────────────────
 // SPICE Kernel Update Thread - DataManager
@@ -43,32 +47,33 @@ void dataManagerWorker(int syncInterval) {
     while (true) {
         std::unique_lock<std::mutex> lock(versionMutex);
         
-        // Wait until a new kernel version is available or thread shutdown requested
-        newVersionAvailable = dataManager.isNewVersionAvailable();  // Only call once
+        newVersionAvailable = dataManager.isNewVersionAvailable();
         versionCondition.wait_for(lock, std::chrono::seconds(syncInterval), [&]() {
             return !shouldDataManagerRun.load();
         });
 
-        if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
-        if(!newVersionAvailable) continue;    // Continue if no new version available
+        if (!shouldDataManagerRun.load()) return;       // Exit if thread shutdown requested
+        if(!newVersionAvailable) continue;              // Continue if no new version available
 
-        if(!dataManager.downloadZipFile()) continue;
-        if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
+        if(!dataManager.downloadZipFile()) continue;    // Continue if download failed
+        if (!shouldDataManagerRun.load()) return;       // Exit if thread shutdown requested
         dataManager.unzipZipFile();
-        if (!shouldDataManagerRun.load()) return; // Exit if thread shutdown requested
+        if (!shouldDataManagerRun.load()) return;       // Exit if thread shutdown requested
         dataManager.deleteZipFile();
         dataManager.editTempMetaKernelFiles();
         dataManager.editTempVersionFile();
 
         signalSpiceDataUnavailable();
-        deinitSpiceCore();      
-        dataManager.moveFolder(); // WebSocket responses are disabled while SPICE data is being updated.
-        initSpiceCore();
+        deinitSpiceCore();                              // Unload kernel files
+        dataManager.moveFolder();                       // WebSocket responses are disabled while SPICE data is being updated.
+        initSpiceCore();                                // Load kernel files
         signalSpiceDataAvailable();        
         
-        dataManager.updateLocalVersion();
+        dataManager.updateLocalVersion();               // Update local version in memory
     }
 }
+
+
 
 // ─────────────────────────────────────────────
 // uWebSocket Thread - WebSocketManager
@@ -83,9 +88,8 @@ void webSocketManagerWorker(int port) {
         .close = onClose
     }).listen(port, [port](auto *token) {
         listenSocket = token;
-        if (token) {
-            std::cout << color("log") << "\nServer listening on port " << port << ".\n" << std::endl;
-        } else {
+        if (token) std::cout << color("log") << "\nServer listening on port " << port << ".\n" << std::endl;
+        else {
             std::cerr << color("error") << "\nFailed to listen on port " << port << ".\n" << std::endl;
             exit(1);
         }
@@ -93,6 +97,8 @@ void webSocketManagerWorker(int port) {
     app = &threadApp;
     threadApp.run();
 }
+
+
 
 // ─────────────────────────────────────────────
 // Graceful Shutdown - stop worker threads
