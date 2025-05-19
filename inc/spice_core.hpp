@@ -1,50 +1,44 @@
 #ifndef SPICE_CORE_HPP
 #define SPICE_CORE_HPP
 
-#include <string>
-#include <cstdint>
+// Standard C++ Libraries
 #include <unordered_map>
+#include <cstdint>
+#include <string>
 
+// External Libraries
 #include <uWebSockets/App.h>
 #include <cspice/SpiceUsr.h>
 
+// Project Headers
 #include <data_manager.hpp>
 
+// ─────────────────────────────────────────────
+// Objects - all relevant objects in the mission
+// ─────────────────────────────────────────────
 const std::unordered_map<int32_t, std::string_view> objects = {
     {0, "SOLAR_SYSTEM_BARYCENTER"},
     {10, "SUN"},
-        {199, "MERCURY"},
-        {299, "VENUS"},
-        {399, "EARTH"},
-            {301, "MOON"},
-        {499, "MARS"},
-            {401, "PHOBOS"},
-            {402, "DEIMOS"},
-        
+    {199, "MERCURY"},
+    {299, "VENUS"},
+    {399, "EARTH"},
+    {301, "MOON"},
+    {499, "MARS"},
+    {401, "PHOBOS"},
+    {402, "DEIMOS"},
     {-658030, "DIDYMOS"},
-        {-658031, "DIMORPHOS"},             // no data available yet
-            {-91900, "DART_IMPACT_SITE"},       // no data available yet, special calculation
-
+    {-658031, "DIMORPHOS"},
+    {-91900, "DART_IMPACT_SITE"},
     {-91000, "HERA_SPACECRAFT"},
-        {-15513000, "JUVENTAS_SPACECRAFT"},
-        {-9102000, "MILANI_SPACECRAFT"}      // no such id
-};  // 8 solorsystem body + 3 asteroid + 3 spacecraft = 15 objects
-
-/*
-const std::unordered_map<int32_t, std::string_view> heraCameras = {
-    {-91500, "HERA_SMC"},
-    {-91400, "HERA_HSH"},
-    {-91200, "HERA_TIRI"},
-    {-91120, "HERA_AFC-2"},
-    {-91110, "HERA_AFC-1"}
-};*/
-
-struct Vector {
-    SpiceDouble x, y, z;
+    {-15513000, "JUVENTAS_SPACECRAFT"},
+    {-9102000, "MILANI_SPACECRAFT"}
 };
-struct Quaternion {
-    SpiceDouble x, y, z, w;
-};
+
+// ─────────────────────────────────────────────
+// Object Motion State Data
+// ─────────────────────────────────────────────
+struct Vector { SpiceDouble x, y, z; };
+struct Quaternion { SpiceDouble x, y, z, w; };
 struct MotionState {
     Vector position;
     Vector velocity;
@@ -52,6 +46,9 @@ struct MotionState {
     Vector angularVelocity;
 };
 
+// ─────────────────────────────────────────────
+// Object Data - motion snapshots for objects
+// ─────────────────────────────────────────────
 class ObjectData {
 public:
     ObjectData(SpiceDouble et, SpiceInt objectId, SpiceInt observerId, bool lightTimeAdjusted = false);
@@ -61,12 +58,14 @@ private:
     SpiceInt objectId;
     SpiceInt observerId;
     SpiceBoolean lightTimeAdjusted;
-
     MotionState objectState;
     SpiceBoolean stateAvailable;
     bool loadState();
 };
 
+// ─────────────────────────────────────────────
+// Message Modes / Error Codes
+// ─────────────────────────────────────────────
 enum class MessageMode : uint8_t {
     ALL_INSTANTANEOUS = 'i',
     ALL_LIGHT_TIME_ADJUSTED = 'l',
@@ -75,42 +74,58 @@ enum class MessageMode : uint8_t {
     ERROR_L = 'g'
 };
 
+// ─────────────────────────────────────────────
+// Request - processing incoming requests
+// ─────────────────────────────────────────────
 class Request {
-public:
-    Request(std::string_view incomingRequest);              // Loads the request values into the class
-    void clearMessage();                            // Cleares the message buffer
-    int writeMessage();                             // 0 succes, 1 writeHeader() failed, 2 writeData() failed, 3 - both failed
-    std::string getMessage() const;                 // Return the binary response string
 private:
-    SpiceDouble utcTimestamp;                          // Request data
-    MessageMode mode;                               // Request data
-    SpiceInt observerId;                             // Request data
-
+    // SPICE ephemeris time
     SpiceDouble et;
+    
+    // Request data
+    SpiceDouble utcTimestamp;
+    MessageMode mode;
+    SpiceInt observerId;
 
-    std::string_view request;                       // Incoming request
-    std::string message;                            // Outgoing message
+    // Request, response containers
+    std::string_view request;
+    std::string message;
 
+    // Request setters
     void setETime(SpiceDouble utcTimestamp);
     void setMode(MessageMode mode);
     void setObserverId(SpiceInt observerId);
     
+    // Message writers
     int writeHeader();                              // Writes the header to the message buffer: 0 success, 1 failiure
     int writeData(SpiceBoolean lightTimeAdjusted);  // Writes the data to the message buffer: 0 success, 1 failiure
+
+public:
+    Request(std::string_view incomingRequest);
+    
+    // Message modifiers
+    void clearMessage();
+    int writeMessage();
+
+    // Getter
+    std::string getMessage() const;
 };
 
+// ─────────────────────────────────────────────
+// SPICE Core Management
+// ─────────────────────────────────────────────
 void initSpiceCore();
 void deinitSpiceCore();
 std::string getBodyFixedFrameName(SpiceInt id);
-
-std::string utcTime(SpiceDouble utcTimestamp);
+std::string utcTimeString(SpiceDouble utcTimestamp);
 SpiceDouble etTime(SpiceDouble utcTimestamp);
-
 std::string getName(SpiceInt id);
 
-std::string createMessage(SpiceDouble utcTime, uint8_t mode, SpiceInt id);
-void printRequest(const std::string& binaryData);
+// ─────────────────────────────────────────────
+// Printer Functions
+// ─────────────────────────────────────────────
 void printResponse(const std::string& binaryData);
-void printHex(const std::string& binaryData);
+void printData(const std::string& binaryData);
+void printHeader(const std::string& binaryData);
 
 #endif // SPICE_CORE_HPP

@@ -1,10 +1,20 @@
-//#include <iostream>
+// Standard C++ Libraries
+#include <iostream>
 #include <cmath>
 
+// External Libraries
 #include <cspice/SpiceUsr.h>
-#include <spice_core.hpp>
 
-// OBJECTDATA
+// Project Headers
+#include <spice_core.hpp>
+#include <utils.hpp>
+
+
+
+// ─────────────────────────────────────────────
+// Object Data - motion snapshots for objects
+// ─────────────────────────────────────────────
+
 ObjectData::ObjectData(SpiceDouble et, SpiceInt objectId, SpiceInt observerId, bool lightTimeAdjusted) {
     this->et = et;
     this->objectId = objectId;
@@ -25,25 +35,20 @@ void ObjectData::serializeToBinary(std::string& buffer) const {
     buffer.append(reinterpret_cast<const char*>(&objectState.angularVelocity), sizeof(objectState.angularVelocity));
 }
 
-
 bool ObjectData::loadState() {
-    
-    // Find object’s body-fixed frame
     std::string bodyFixedFrame = getBodyFixedFrameName(objectId);
     if (bodyFixedFrame == "UNKNOWN") {
-        std::cerr << "No valid frame found for ID: " << objectId << std::endl;
+        std::cerr << color("error") << "No valid frame found for ID: " << objectId << std::endl;
         stateAvailable = false;
         return false;
     }
 
-    // Set error handling to return on error
-    erract_c("SET", 6, (SpiceChar*)"RETURN");
-
     #ifdef DOCKER
         errdev_c("SET", 0, (SpiceChar *)"NULL");
+    #else
+        erract_c("SET", 6, (SpiceChar*)"RETURN"); 
     #endif
-
-    // Load position and velocity
+    
     SpiceDouble spiceState[6], lt;
 
     SpiceBoolean found = false;
@@ -55,23 +60,24 @@ bool ObjectData::loadState() {
     if(objectId == -9102000)        spkezr_c("MILANI", et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT+S") : "NONE", observerName, spiceState, &lt);
     else if(observerId == -9102000) spkezr_c(objectName, et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT+S") : "NONE", "MILANI", spiceState, &lt);
     else                            spkez_c(objectId, et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT+S") : "NONE", observerId, spiceState, &lt);
+    
     if (failed_c()) {
         reset_c();
-        return (stateAvailable = false);
+        return stateAvailable = false;
     }
 
     objectState.position = {spiceState[0], spiceState[1], spiceState[2]};
     objectState.velocity = {spiceState[3], spiceState[4], spiceState[5]};
 
-    // Orientation and angular velocity
     SpiceDouble xform[6][6];
     SpiceDouble correctedET = lightTimeAdjusted ? et - lt : et;
+    
     if(objectId == -9102000) sxform_c("MILANI_SPACECRAFT", "J2000", correctedET, xform);
     else sxform_c(bodyFixedFrame.c_str(), "J2000", correctedET, xform);
 
     if (failed_c()) {
         reset_c();
-        return (stateAvailable = false);
+        return stateAvailable = false;
     }
 
     SpiceDouble rotationMatrix[3][3], quaternion[4], angularVelocity[3];
@@ -81,80 +87,32 @@ bool ObjectData::loadState() {
     /* 
      * Spice quaternion order: w, x, y, z
      * Three.js quaternion order: x, y, z, w
+     * 
+     *  We send quaternion as x, y, z, w to Three.js
      */
     objectState.orientation = {quaternion[1], quaternion[2], quaternion[3], quaternion[0]};
     objectState.angularVelocity = {angularVelocity[0], angularVelocity[1], angularVelocity[2]};
 
-    return (stateAvailable = true);
+    return stateAvailable = true;
 }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Request::Request(std::string_view incomingRequest) : request(incomingRequest) {    
-    std::memcpy(&utcTimestamp, request.data(), sizeof(utcTimestamp)); // Read first 8 bytes (double)
-    this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]); // Read byte at index 8
-    std::memcpy(&observerId, request.data() + sizeof(utcTimestamp) + sizeof(mode), sizeof(observerId));
-    this->setETime(utcTimestamp);
-    this->clearMessage();
-    this->writeMessage();
-}
-std::string Request::getMessage() const {
-    return message;
-}
-
-
+// ─────────────────────────────────────────────
+// Request - processing incoming requests
+// ─────────────────────────────────────────────
 
 void Request::setETime(SpiceDouble utcTimestamp) {
     this->et = etTime(utcTimestamp);
 }
+
 void Request::setMode(MessageMode mode) {
     this->mode = mode;
 }
+
 void Request::setObserverId(SpiceInt observerId) {
     this->observerId = observerId;
 }
-
-
-
-void Request::clearMessage() {
-    this->message.clear();
-}
-int Request::writeMessage() {
-    int error = 0;
-    error |= writeHeader();
-    if(this->mode != MessageMode::ALL_INSTANTANEOUS && this->mode != MessageMode::ALL_LIGHT_TIME_ADJUSTED) {
-        message[8] = (uint8_t)MessageMode::ERROR;
-        error |= true;
-        return -1;
-    }
-    error |= writeData(mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED);
-    if(!error) return 0;
-
-    message[8] = (mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED) ? (uint8_t)MessageMode::ERROR_L : (uint8_t)MessageMode::ERROR_I;
-
-    return -1;
-}
-
-
 
 int Request::writeHeader() {
     int size = message.size();
@@ -163,6 +121,7 @@ int Request::writeHeader() {
     if((message.size() - size) != 9) return 1;
     return 0;
 }
+
 int Request::writeData(SpiceBoolean lightTimeAdjusted) {
     int size = message.size();
     for (const auto& [objectId, name] : objects) {
@@ -173,36 +132,57 @@ int Request::writeData(SpiceBoolean lightTimeAdjusted) {
     return 0;
 }
 
+Request::Request(std::string_view incomingRequest) : request(incomingRequest) {    
+    std::memcpy(&utcTimestamp, request.data(), sizeof(utcTimestamp));
+    this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]);
+    std::memcpy(&observerId, request.data() + sizeof(utcTimestamp) + sizeof(mode), sizeof(observerId));
+    this->setETime(utcTimestamp);
+    this->clearMessage();
+    this->writeMessage();
+}
+
+void Request::clearMessage() {
+    this->message.clear();
+}
+
+int Request::writeMessage() {
+    int error = writeHeader();
+    
+    if(this->mode != MessageMode::ALL_INSTANTANEOUS && this->mode != MessageMode::ALL_LIGHT_TIME_ADJUSTED) {
+        message[8] = (uint8_t)MessageMode::ERROR;
+        return -1;
+    }
+    
+    error |= writeData(mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED);
+    
+    if(!error) return 0;
+    
+    message[8] = (mode == MessageMode::ALL_LIGHT_TIME_ADJUSTED) ? (uint8_t)MessageMode::ERROR_L : (uint8_t)MessageMode::ERROR_I;
+    return -1;
+}
+
+std::string Request::getMessage() const {
+    return message;
+}
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// ─────────────────────────────────────────────
+// SPICE Core Management
+// ─────────────────────────────────────────────
 
 void initSpiceCore() {
-    std::filesystem::path operationalMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_ops.tm";
-    std::filesystem::path planMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_plan.tm";
-    std::filesystem::path studyMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_study_PO_EMA_2024.tm";
-    std::filesystem::path cremaMetakernel = getExecutablePath().parent_path().parent_path() / "data" / "hera" / "kernels" / "mk" / "hera_crema_2_1.tm";
+    std::filesystem::path parentFolder = getExecutablePath().parent_path().parent_path();
+    
+    // std::filesystem::path studyMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_study_PO_EMA_2024.tm";
+    std::filesystem::path cremaMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_crema_2_1.tm";
+    std::filesystem::path operationalMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_ops.tm";
+    std::filesystem::path planMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_plan.tm";
 
     // furnsh_c(studyMetakernel.c_str());
-
-    furnsh_c(cremaMetakernel.c_str());          // 2024-10-08   2027-03-02      movement is ok, no juventas, milani, no mars flyby
-    furnsh_c(operationalMetakernel.c_str());    // 2024-10-08   2026-10-27      accurate
-    furnsh_c(planMetakernel.c_str());           // 2024-10-08   2027-04-16      movement is ok, juventas, milani, too (similarity to ops)
+    furnsh_c(cremaMetakernel.c_str());
+    furnsh_c(operationalMetakernel.c_str());
+    furnsh_c(planMetakernel.c_str());
 }
 
 void deinitSpiceCore() {
@@ -223,20 +203,14 @@ std::string getBodyFixedFrameName(SpiceInt id) {
     return (frameName[0] != '\0') ? frameName : "UNKNOWN";
 }
 
-
-
-
-std::string utcTime(SpiceDouble utcTimestamp) {
-    // Separate seconds and fractional part
+std::string utcTimeString(SpiceDouble utcTimestamp) {
     uint32_t seconds = static_cast<uint32_t>(utcTimestamp);
     double fractionalSeconds = utcTimestamp - seconds;
 
-    // Convert total seconds into hours, minutes, and seconds
     uint32_t minutes = (seconds / 60) % 60;
     uint32_t hours = (seconds / 3600) % 24;
     uint32_t totalDays = seconds / 86400;  // Total number of days since 1970-01-01
 
-    // Calculate date starting from 1970-01-01
     uint32_t year = 1970;
     uint32_t month = 1;
     uint32_t day = 1;
@@ -247,14 +221,14 @@ std::string utcTime(SpiceDouble utcTimestamp) {
     // Handle the passage of days over multiple years
     while (totalDays >= 365) {
         bool leap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));  // Leap year check
+        
         uint32_t yearDays = leap ? 366 : 365;
 
         if (totalDays >= yearDays) {
             totalDays -= yearDays;
             year++;
-        } else {
-            break;
         }
+        else break;
     }
 
     // Handle months and days within the current year
@@ -272,11 +246,11 @@ std::string utcTime(SpiceDouble utcTimestamp) {
               << std::setw(2) << std::setfill('0') << day << 'T'
               << std::setw(2) << std::setfill('0') << hours << ':'
               << std::setw(2) << std::setfill('0') << minutes << ':'
-              << std::setw(2) << std::setfill('0') << (seconds % 60);  // Use seconds mod 60 for accuracy
+              << std::setw(2) << std::setfill('0') << (seconds % 60);
 
     if (fractionalSeconds > 0) {
-        uint32_t microseconds = static_cast<uint32_t>(fractionalSeconds * 1e6);  // Convert fractional seconds to microseconds
-        utcStream << '.' << std::setw(6) << std::setfill('0') << microseconds;  // Add fractional part
+        uint32_t microseconds = static_cast<uint32_t>(fractionalSeconds * 1e6);
+        utcStream << '.' << std::setw(6) << std::setfill('0') << microseconds;
     }
 
     return utcStream.str();
@@ -285,13 +259,9 @@ std::string utcTime(SpiceDouble utcTimestamp) {
 
 SpiceDouble etTime(SpiceDouble utcTimestamp) {
     SpiceDouble et;
-    str2et_c(utcTime(utcTimestamp).c_str(), &et);
+    str2et_c(utcTimeString(utcTimestamp).c_str(), &et);
     return et;
 }
-
-
-
-
 
 std::string getName(SpiceInt id) {
     char name[32];
@@ -302,27 +272,31 @@ std::string getName(SpiceInt id) {
 
 
 
+// ─────────────────────────────────────────────
+// Printer Functions
+// ─────────────────────────────────────────────
 
+void printResponse(const std::string& binaryData) {
+    constexpr size_t headerSize = sizeof(SpiceDouble) + sizeof(uint8_t);
 
-std::string createMessage(SpiceDouble utcTime, uint8_t mode, SpiceInt id) {
-    std::string message;
-    message.resize(sizeof(utcTime) + sizeof(mode) + sizeof(id));
+    if (binaryData.size() < headerSize) {
+        std::cerr << color("error") << "Error: Binary data too small!\n";
+        return;
+    }
 
-    std::memcpy(&message[0], &utcTime, sizeof(utcTime));  // Store UTC time
-    std::memcpy(&message[sizeof(utcTime)], &mode, sizeof(mode));  // Store mode
-    std::memcpy(&message[sizeof(utcTime) + sizeof(mode)], &id, sizeof(id));  // Store ID
+    std::string dataPart = binaryData.substr(headerSize);
 
-    return message;
+    printHeader(binaryData);
+    printData(dataPart);
 }
 
-static void printData(const std::string& binaryData) {
+void printData(const std::string& binaryData) {
     size_t index = 0;
     const size_t structSize = 4 + (3 + 3 + 4 + 3) * 8; // Total bytes per struct
 
     auto printInt = [&]() {
         if (index + 4 > binaryData.size()) return;
         int32_t value = *reinterpret_cast<const int32_t*>(&binaryData[index]);
-
         std::cout << std::setw(12) << value << "   ";
         for (size_t i = 0; i < 4; ++i, ++index) {
             std::cout << std::hex << std::setw(2) << std::setfill('0')
@@ -334,24 +308,25 @@ static void printData(const std::string& binaryData) {
     auto printDouble = [&](size_t count) {
         for (size_t i = 0; i < count; ++i) {
             if (index + 8 > binaryData.size()) return;
-            double value = *reinterpret_cast<const double*>(&binaryData[index]);
 
+            double value = *reinterpret_cast<const double*>(&binaryData[index]);
             std::cout << std::setw(12) << std::scientific << std::setprecision(4) << std::uppercase 
                       << std::right << value << "   ";
+
             for (size_t j = 0; j < 8; ++j, ++index) {
                 std::cout << std::hex << std::setw(2) << std::setfill('0')
                           << static_cast<int>(static_cast<unsigned char>(binaryData[index])) << " ";
                 if ((j + 1) % 4 == 0) std::cout << " ";
             }
+
             std::cout << std::dec << std::setfill(' ') << "\n";
         }
+
         std::cout << "\n";
     };
 
     while (index + structSize <= binaryData.size()) {
-        
-        printInt(); // int32
-
+        printInt();
         printDouble(3);
         printDouble(3);
         printDouble(4);
@@ -360,17 +335,15 @@ static void printData(const std::string& binaryData) {
     }
 }
 
-static void printHeader(const std::string& binaryData) {
+void printHeader(const std::string& binaryData) {
     if (binaryData.size() < sizeof(SpiceDouble) + sizeof(uint8_t)) {
-        std::cerr << "Error: Binary data too small!\n";
+        std::cerr << color("error") << "Error: Binary data too small!\n";
         return;
     }
 
-    // Extract SpiceDouble (UTC time)
     SpiceDouble utcTime;
     std::memcpy(&utcTime, binaryData.data(), sizeof(utcTime));
 
-    // Extract uint8_t (mode/status)
     uint8_t mode;
     std::memcpy(&mode, binaryData.data() + sizeof(SpiceDouble), sizeof(uint8_t));
 
@@ -382,65 +355,23 @@ static void printHeader(const std::string& binaryData) {
             std::cout << std::hex << std::setw(2) << std::setfill('0')
                       << static_cast<int>(static_cast<unsigned char>(binaryData[index])) << " ";
         }
+
         std::cout << std::dec << std::setfill(' ');
     };
 
-    std::string line(60, '-'); // Box width
+    std::string line(60, '-');
     std::cout << "\n" << line << "\n";
     std::cout << "|                 " << std::setw(40) << std::left << "Header Information" << " |\n" << std::right;
     std::cout << line << "\n";
     std::cout << "| UTC Time: " << "0x ";
+    
     printDouble();
-              // << std::setw(8) << std::setfill('0') << std::hex << std::uppercase << static_cast<uint32_t>(utcTime)
+
     std::cout << "      (" << std::setw(10) << static_cast<SpiceDouble>(utcTime) << ") |\n";
     std::cout << "| Mode:    " << " 0x "
-              << std::setw(2) << std::left << std::setfill('0') << std::hex << std::uppercase << static_cast<int>(mode) << std::setfill(' ')
-              << std::setw(29) << std::right << " ("  << std::dec  << std::setw(11) << std::setfill(' ') << static_cast<int>(mode) << ") |\n";
+              << std::setw(2) << std::left << std::setfill('0')
+              << std::hex << std::uppercase << static_cast<int>(mode) << std::setfill(' ')
+              << std::setw(29) << std::right << " ("  << std::dec  << std::setw(11)
+              << std::setfill(' ') << static_cast<int>(mode) << ") |\n";
     std::cout << line << "\n";
-}
-
-void printRequest(const std::string& binaryData) {
-    size_t index = 0;
-
-    auto printInt = [&]() {
-        if (index + 4 > binaryData.size()) return;
-        int32_t value = *reinterpret_cast<const int32_t*>(&binaryData[index]);
-
-        std::cout << std::setw(12) << value << "   ";
-        for (size_t i = 0; i < 4; ++i, ++index) {
-            std::cout << std::hex << std::setw(2) << std::setfill('0')
-                      << static_cast<int>(static_cast<unsigned char>(binaryData[index])) << " ";
-        }
-        std::cout << std::dec << std::setfill(' ') << "\n\n";
-    };
-
-    uint8_t md = binaryData[5];
-
-    while (index <= binaryData.size()) {
-        std::cout << "-----------------------------------------\n\n";
-        printInt(); // int32
-        std::cout << std::setw(11) << (int)md << "   " << std::hex << std::setw(2) << std::setfill('0'); index++;  // uint8
-        std::cout << std::dec << std::setfill(' ') << "\n";
-        printInt();
-    }
-}
-
-void printResponse(const std::string& binaryData) {
-    constexpr size_t headerSize = sizeof(SpiceDouble) + sizeof(uint8_t);
-    if (binaryData.size() < headerSize) {
-        std::cerr << "Error: Binary data too small!\n";
-        return;
-    }
-    printHeader(binaryData);
-    std::string dataPart = binaryData.substr(headerSize);
-    printData(dataPart);
-}
-
-void printHex(const std::string& binaryData) {
-    std::cout << "Little-endian binary message (hex): \n";
-    for (unsigned char c : binaryData) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0')
-                  << static_cast<int>(c) << " ";
-    }
-    std::cout << std::dec << std::setfill(' ') << std::endl; // Reset to decimal format
 }
