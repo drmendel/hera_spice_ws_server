@@ -67,12 +67,13 @@ private:
     std::filesystem::path exeDirectory;                 // Directory where the executable is located (build)
     std::filesystem::path dataDirectory;                // Data directory (where the zip file - HERA.zip - is downloaded
     std::filesystem::path heraDirectory;                // Main Hera directory (data is used from here)
-    std::filesystem::path heraTemporaryDirectory;       // Temporary directory for unzipping (HERA)
     std::filesystem::path kernelDirectory;              // Active kernel directory (referenced in meta-kernel files)
-    std::filesystem::path tempMetaKernelDirectory;      // Temporary directory for modifying meta-kernel paths
-    std::filesystem::path miscDirectory;                // Miscellaneous directory (not used in the current implementation)
-    std::filesystem::path manifestFile;                 // Manifest file (not used in the current implementation)
-    std::filesystem::path readmeFile;                   // Readme file (not used in the current implementation)
+    
+    std::filesystem::path temporaryHeraDirectory;       // Temporary directory for unzipping (HERA)
+    std::filesystem::path temporaryMetaKernelDirectory; // Temporary directory for modifying meta-kernel paths
+    std::filesystem::path temporaryMiscDirectory;       // Miscellaneous directory (not used in the current implementation)
+    std::filesystem::path temporaryManifestFile;        // Manifest file (not used in the current implementation)
+    std::filesystem::path temporaryReadmeFile;          // Readme file (not used in the current implementation)
 
     // File Paths
     std::filesystem::path zipFile;                      // Path to the downloaded zip file (HERA.zip)

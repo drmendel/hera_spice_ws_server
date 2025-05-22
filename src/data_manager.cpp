@@ -372,12 +372,12 @@ DataManager::DataManager() {
     exeDirectory = std::filesystem::path(getDefaultSaveDir());
     dataDirectory = exeDirectory / "data";
     heraDirectory = dataDirectory / "hera";
-    heraTemporaryDirectory = dataDirectory / "hera_tmp";
     kernelDirectory = heraDirectory / "kernels";
-    tempMetaKernelDirectory = heraTemporaryDirectory / "kernels" / "mk";
-    miscDirectory = heraTemporaryDirectory / "misc";
-    manifestFile = heraTemporaryDirectory / "MANIFEST.in";
-    readmeFile = heraTemporaryDirectory / "README.md";
+    temporaryHeraDirectory = dataDirectory / "hera_tmp";
+    temporaryMetaKernelDirectory = temporaryHeraDirectory / "kernels" / "mk";
+    temporaryMiscDirectory = temporaryHeraDirectory / "misc";
+    temporaryManifestFile = temporaryHeraDirectory / "MANIFEST.in";
+    temporaryReadmeFile = temporaryHeraDirectory / "README.md";
 
     zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl));
 
@@ -412,11 +412,11 @@ bool DataManager::unzipZipFile() {
 }
 
 bool DataManager::editTempMetaKernelFiles() {
-    return updateMetaKernelPaths(tempMetaKernelDirectory, kernelDirectory);    
+    return updateMetaKernelPaths(temporaryMetaKernelDirectory, kernelDirectory);    
 }
 
 bool DataManager::editTempVersionFile() {
-    std::ofstream versionFile(heraTemporaryDirectory / "version");
+    std::ofstream versionFile(temporaryHeraDirectory / "version");
     if (!versionFile.is_open()) {
         std::cerr << color("error") << "No version file found." << std::endl;
         return false;
@@ -428,7 +428,7 @@ bool DataManager::editTempVersionFile() {
 }
 
 bool DataManager::moveFolder() {
-    return replaceDirectory(heraTemporaryDirectory, heraDirectory);
+    return replaceDirectory(temporaryHeraDirectory, heraDirectory);
 }
 
 bool DataManager::deleteZipFile() {
@@ -449,23 +449,23 @@ bool DataManager::deleteUnUsableFiles() {
     std::error_code ec;
     bool success = true;
 
-    if (!std::filesystem::remove_all(miscDirectory, ec)) {
+    if (!std::filesystem::remove_all(temporaryMiscDirectory, ec)) {
         std::cerr << color("error") << "Error deleting "
-                  << miscDirectory << ": " << ec.message() << std::endl;
+                  << temporaryMiscDirectory << ": " << ec.message() << std::endl;
         success = false;
-    } else std::cout << color("log") << "Deleted: " << miscDirectory << std::endl;
+    } else std::cout << color("log") << "Deleted: " << temporaryMiscDirectory << std::endl;
 
-    if (!std::filesystem::remove_all(manifestFile, ec)) {
+    if (!std::filesystem::remove_all(temporaryManifestFile, ec)) {
         std::cerr << color("error") << "Error deleting "
-                  << manifestFile << ": " << ec.message() << std::endl;
+                  << temporaryManifestFile << ": " << ec.message() << std::endl;
         success = false;
-    } else std::cout << color("log") << "Deleted: " << manifestFile << std::endl;
+    } else std::cout << color("log") << "Deleted: " << temporaryManifestFile << std::endl;
 
-    if (!std::filesystem::remove_all(readmeFile, ec)) {
+    if (!std::filesystem::remove_all(temporaryReadmeFile, ec)) {
         std::cerr << color("error") << "Error deleting "
-                  << readmeFile << ": " << ec.message() << std::endl;
+                  << temporaryReadmeFile << ": " << ec.message() << std::endl;
         success = false;
-    } else std::cout << color("log") << "Deleted: " << readmeFile << std::endl;
+    } else std::cout << color("log") << "Deleted: " << temporaryReadmeFile << std::endl;
 
     return success;
 }
