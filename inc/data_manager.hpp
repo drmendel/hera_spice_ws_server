@@ -54,21 +54,17 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 // ─────────────────────────────────────────────
 class DataManager {
 private:
-    // URLs
-    std::string zipUrl;
-    std::string versionUrl;
-
     // Version Tracking
     std::string localVersion;
     std::string remoteVersion;
-    std::filesystem::path versionFilePath;
+    std::filesystem::path versionFile;
 
     // Directory Paths
     std::filesystem::path exeDirectory;                 // Directory where the executable is located (build)
     std::filesystem::path dataDirectory;                // Data directory (where the zip file - HERA.zip - is downloaded
     std::filesystem::path heraDirectory;                // Main Hera directory (data is used from here)
     std::filesystem::path kernelDirectory;              // Active kernel directory (referenced in meta-kernel files)
-    
+
     std::filesystem::path temporaryHeraDirectory;       // Temporary directory for unzipping (HERA)
     std::filesystem::path temporaryMetaKernelDirectory; // Temporary directory for modifying meta-kernel paths
     std::filesystem::path temporaryMiscDirectory;       // Miscellaneous directory (not used in the current implementation)
@@ -78,15 +74,12 @@ private:
     // File Paths
     std::filesystem::path zipFile;                      // Path to the downloaded zip file (HERA.zip)
 
-    // Version Management
-    void loadLocalVersion();                            // Load the local version from the version file
-    void loadRemoteVersion();                           // Load the remote version from the URL
-
 public:
     DataManager();
 
     // Core Operations
-    std::string getLocalVersion() const;                // Get the local version from memory
+    std::string getLocalVersion();                      // Get the local version from the version file
+    std::string getRemoteVersion();                     // Get the remote version from the URL
     bool isNewVersionAvailable();                       // Check if a new version is available
     bool downloadZipFile();                             // Download the zip file from the URL  
     bool unzipZipFile();                                // Unzip the downloaded zip file

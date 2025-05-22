@@ -346,29 +346,7 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 // DataManager Class
 // ─────────────────────────────────────────────
 
-void DataManager::loadLocalVersion() {
-    std::ifstream versionFile(versionFilePath);
-    if (!versionFile.is_open()) {
-        localVersion = "default";
-        return;
-    }
-
-    std::getline(versionFile, localVersion);
-    versionFile.close();
-
-    return;
-}
-
-void DataManager::loadRemoteVersion() {
-    remoteVersion = downloadUrlContent(versionUrl);
-    return;
-}
-
-
 DataManager::DataManager() {
-    zipUrl = REMOTE_ARCHIVE_URL;
-    versionUrl = REMOTE_VERSION_URL;
-
     exeDirectory = std::filesystem::path(getDefaultSaveDir());
     dataDirectory = exeDirectory / "data";
     heraDirectory = dataDirectory / "hera";
@@ -379,20 +357,29 @@ DataManager::DataManager() {
     temporaryManifestFile = temporaryHeraDirectory / "MANIFEST.in";
     temporaryReadmeFile = temporaryHeraDirectory / "README.md";
 
-    zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl));
+    zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(REMOTE_ARCHIVE_URL));
 
-    versionFilePath = heraDirectory / "version";
-
-    loadLocalVersion();
-    loadRemoteVersion();
+    versionFile = heraDirectory / "version";
 }
 
+std::string DataManager::getLocalVersion() {
+    std::ifstream file(versionFile);
+    if (!file.is_open()) return "default";
 
-std::string DataManager::getLocalVersion() const {
+    std::string localVersion;
+    std::getline(file, localVersion);
+    file.close();
+
     return localVersion;
 }
 
+std::string DataManager::getRemoteVersion() {
+    return downloadUrlContent(REMOTE_VERSION_URL);
+}
+
 bool DataManager::isNewVersionAvailable() {
+    std::string localVersion = getLocalVersion();
+    std::string remoteVersion = getRemoteVersion();
     if (localVersion == remoteVersion) {
         std::cout << color("log") << "No new kernel version available.\nLocal kernel version:  " << localVersion << "\n\n";
         return false;
@@ -404,7 +391,7 @@ bool DataManager::isNewVersionAvailable() {
 }    
 
 bool DataManager::downloadZipFile() {
-    return downloadFile(zipUrl, dataDirectory);
+    return downloadFile(REMOTE_ARCHIVE_URL, dataDirectory);
 }
 
 bool DataManager::unzipZipFile() {
@@ -439,10 +426,6 @@ bool DataManager::deleteZipFile() {
     }
     std::cout << color("log") << "\nDeleted: " << zipFile << std::endl;
     return true;
-}
-
-void DataManager::updateLocalVersion() {
-    localVersion = remoteVersion;
 }
 
 bool DataManager::deleteUnUsableFiles() {

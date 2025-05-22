@@ -45,14 +45,7 @@ void dataManagerWorker(int syncInterval) {
         signalSpiceDataAvailable();
     }
 
-    while (true) {
-        std::unique_lock<std::mutex> lock(versionMutex);
-    
-        if(!shouldDataManagerRun.load()) {
-            deinitSpiceCore();
-            break;                                              // Exit if thread shutdown requested
-        }
-
+    while (true) {    
         if(dataManager.isNewVersionAvailable()) {
             if(!dataManager.downloadZipFile()) continue;            // Continue if download failed
             if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
@@ -65,14 +58,19 @@ void dataManagerWorker(int syncInterval) {
             deinitSpiceCore();                              // Unload kernel files
             dataManager.moveFolder();                       // WebSocket responses are disabled while SPICE data is being updated.
             initSpiceCore();                                // Load kernel files
-            signalSpiceDataAvailable();        
-        
-            dataManager.updateLocalVersion();               // Update local version in memory
+            signalSpiceDataAvailable();                     // Notify SPICE data is available
         }
         
+        std::unique_lock<std::mutex> lock(versionMutex);
         versionCondition.wait_for(lock, std::chrono::seconds(syncInterval), [&]() {
             return !shouldDataManagerRun.load();
         });
+
+        if(!shouldDataManagerRun.load()) {
+            signalSpiceDataUnavailable();
+            deinitSpiceCore();
+            break;                                                  // Exit if thread shutdown requested
+        }
     }
 
     return;
