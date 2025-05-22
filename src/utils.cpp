@@ -32,7 +32,7 @@ void loadValues(int argc, char** argv, int& port, int& syncInterval) {
 void printUsage(char** argv) {
     std::cerr << color("reset") << "Usage: " << argv[0] << " <port> <interval>\n";
     std::cerr << "<port>    - The port number to run the server on.\n";
-    std::cerr << "<interval> - The interval (in hours) between kernel version checks.\n";
+    std::cerr << "<interval> - The interval (in seconds) between kernel version checks.\n";
 }
 
 void printTitle() {
