@@ -43,10 +43,10 @@ bool ObjectData::loadState() {
         return false;
     }
 
+    erract_c("SET", 6, (SpiceChar*)"RETURN");       // No abort on error (most spice errors are not fatal)
+
     #ifdef DOCKER
-        errdev_c("SET", 0, (SpiceChar *)"NULL");
-    #else
-        erract_c("SET", 6, (SpiceChar*)"RETURN"); 
+        errdev_c("SET", 0, (SpiceChar *)"NULL");    // No std output
     #endif
     
     SpiceDouble spiceState[6], lt;
