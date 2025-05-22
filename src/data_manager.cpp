@@ -346,18 +346,22 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 // DataManager Class
 // ─────────────────────────────────────────────
 
-std::string DataManager::loadLocalVersion() {
+void DataManager::loadLocalVersion() {
     std::ifstream versionFile(versionFilePath);
-    if (!versionFile.is_open()) return "default";
+    if (!versionFile.is_open()) {
+        localVersion = "default";
+        return;
+    }
 
     std::getline(versionFile, localVersion);
     versionFile.close();
 
-    return localVersion;
+    return;
 }
 
-std::string DataManager::loadRemoteVersion() {
-    return downloadUrlContent(versionUrl);
+void DataManager::loadRemoteVersion() {
+    remoteVersion = downloadUrlContent(versionUrl);
+    return;
 }
 
 
@@ -376,8 +380,8 @@ DataManager::DataManager() {
 
     versionFilePath = heraDirectory / "version";
 
-    localVersion = loadLocalVersion();
-    remoteVersion = loadRemoteVersion();
+    loadLocalVersion();
+    loadRemoteVersion();
 }
 
 
@@ -387,10 +391,12 @@ std::string DataManager::getLocalVersion() const {
 
 bool DataManager::isNewVersionAvailable() {
     if (localVersion == remoteVersion) {
-        std::cout << color("log") << "No new kernel version available.\n\n";
+        std::cout << color("log") << "No new kernel version available.\nLocal kernel version:  " << localVersion << "\n\n";
         return false;
     }
-    std::cout << color("log") << "New kernel version available.\n\n";
+    std::cout << color("log") << "New kernel version available!\n" 
+              << "Local  kernel version: " << localVersion << "\n"
+              << "Remote kernel version: " << remoteVersion << "\n\n";
     return true;
 }    
 

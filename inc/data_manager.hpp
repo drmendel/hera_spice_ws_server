@@ -75,8 +75,8 @@ private:
     std::filesystem::path zipFile;                      // Path to the downloaded zip file (HERA.zip)
 
     // Version Management
-    std::string loadLocalVersion();                     // Load the local version from the version file
-    std::string loadRemoteVersion();                    // Load the remote version from the URL
+    void loadLocalVersion();                     // Load the local version from the version file
+    void loadRemoteVersion();                    // Load the remote version from the URL
 
 public:
     DataManager();

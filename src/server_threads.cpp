@@ -47,30 +47,31 @@ void dataManagerWorker(int syncInterval) {
 
     while (true) {
         std::unique_lock<std::mutex> lock(versionMutex);
-        
-        versionCondition.wait_for(lock, std::chrono::seconds(syncInterval), [&]() {
-            return !shouldDataManagerRun.load();
-        });
-
+    
         if(!shouldDataManagerRun.load()) {
             deinitSpiceCore();
             break;                                              // Exit if thread shutdown requested
         }
-        if(!dataManager.isNewVersionAvailable()) continue;      // Continue if no new version available
 
-        if(!dataManager.downloadZipFile()) continue;            // Continue if download failed
-        if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
-        dataManager.deleteZipFile();
-        if(!dataManager.editTempMetaKernelFiles()) continue;    // Continue if editing meta-kernel files failed;
-        if(!dataManager.editTempVersionFile()) continue;
+        if(dataManager.isNewVersionAvailable()) {
+            if(!dataManager.downloadZipFile()) continue;            // Continue if download failed
+            if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
+            dataManager.deleteZipFile();
+            if(!dataManager.editTempMetaKernelFiles()) continue;    // Continue if editing meta-kernel files failed;
+            if(!dataManager.editTempVersionFile()) continue;
 
-        signalSpiceDataUnavailable();
-        deinitSpiceCore();                              // Unload kernel files
-        dataManager.moveFolder();                       // WebSocket responses are disabled while SPICE data is being updated.
-        initSpiceCore();                                // Load kernel files
-        signalSpiceDataAvailable();        
+            signalSpiceDataUnavailable();
+            deinitSpiceCore();                              // Unload kernel files
+            dataManager.moveFolder();                       // WebSocket responses are disabled while SPICE data is being updated.
+            initSpiceCore();                                // Load kernel files
+            signalSpiceDataAvailable();        
         
-        dataManager.updateLocalVersion();               // Update local version in memory
+            dataManager.updateLocalVersion();               // Update local version in memory
+        }
+        
+        versionCondition.wait_for(lock, std::chrono::seconds(syncInterval), [&]() {
+            return !shouldDataManagerRun.load();
+        });
     }
 
     return;
