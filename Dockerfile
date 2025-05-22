@@ -1,13 +1,11 @@
 # Stage 1: Build
 FROM alpine:latest AS builder
 
-RUN apk add --no-cache g++ cmake make git openssl-dev zlib-dev curl-dev wget tar gzip zstd-dev tcsh
+RUN apk add --no-cache g++ cmake make git openssl-dev zlib-dev curl-dev wget tar gzip zstd-dev
 
 # CSPICE
 RUN wget https://naif.jpl.nasa.gov/pub/naif/toolkit//C/PC_Linux_GCC_64bit/packages/cspice.tar.Z && \
     tar -xvf cspice.tar.Z && \
-    cd cspice && \
-    makeall.csh && \
     mkdir -p /usr/local/include/cspice && \
     cp -r cspice/include/* /usr/local/include/cspice/ && \
     mkdir -p /usr/local/lib/cspice && \
