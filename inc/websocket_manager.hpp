@@ -1,7 +1,7 @@
 #ifndef WEBSOCKET_MANAGER_HPP
 #define WEBSOCKET_MANAGER_HPP
 
-// C++ Standard Libraries
+// Standard C++ Libraries
 #include <condition_variable>
 #include <queue>
 #include <unordered_set>
@@ -56,6 +56,6 @@ void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, st
 extern uWS::App* app;
 extern uWS::Loop* loop;
 extern us_listen_socket_t* listenSocket;
-void shutdownServer();
+void stopWebSocketManagerWorker();
 
 #endif // WEBSOCKET_MANAGER_HPP

@@ -7,11 +7,7 @@
 #include <string>
 
 // External Libraries
-#include <uWebSockets/App.h>
 #include <cspice/SpiceUsr.h>
-
-// Project Headers
-#include <data_manager.hpp>
 
 // ─────────────────────────────────────────────
 // Objects - all relevant objects in the mission

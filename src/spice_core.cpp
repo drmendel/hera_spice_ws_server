@@ -1,11 +1,14 @@
 // Standard C++ Libraries
+#include <filesystem>
 #include <iostream>
+#include <cstring>
 #include <cmath>
 
 // External Libraries
 #include <cspice/SpiceUsr.h>
 
 // Project Headers
+#include <data_manager.hpp>
 #include <spice_core.hpp>
 #include <utils.hpp>
 

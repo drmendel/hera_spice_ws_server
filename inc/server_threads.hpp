@@ -1,7 +1,7 @@
 #ifndef SERVER_THREADS_HPP
 #define SERVER_THREADS_HPP
 
-// C++ Standard Libraries
+// Standard C++ Libraries
 #include <condition_variable>
 #include <csignal>
 

@@ -8,10 +8,12 @@
 #include <array>                // Fixed-size data storage
 
 // System Libraries
-#include <sys/ioctl.h>          // Terminal width retrieval (ioctl, winsize)
-#include <unistd.h>             // File and terminal operations (STDOUT_FILENO)
-#include <limits.h>             // Path length limits (PATH_MAX)
-#include <libgen.h>             // Path manipulation (dirname)
+#ifdef __linux__
+    #include <sys/ioctl.h>          // Terminal width retrieval (ioctl, winsize)
+    #include <unistd.h>             // File and terminal operations (STDOUT_FILENO)
+    #include <limits.h>             // Path length limits (PATH_MAX)
+    #include <libgen.h>             // Path manipulation (dirname)
+#endif
 
 // External Libraries
 #include <minizip/unzip.h>      // ZIP extraction (unzFile, unzOpen, unzReadCurrentFile)
@@ -28,10 +30,11 @@
 // ─────────────────────────────────────────────
 
 unsigned int getTerminalWidth() {
-    unsigned int width = 40;
-    struct winsize w;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) width = w.ws_col;
-    return width;
+    #ifdef __linux__
+        struct winsize w;
+        if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) return w.ws_col;
+    #endif
+    return 40;
 }
 
 std::string getDefaultSaveDir() {
@@ -431,4 +434,20 @@ bool DataManager::deleteZipFile() {
 
 void DataManager::updateLocalVersion() {
     localVersion = remoteVersion;
+}
+
+
+
+// ─────────────────────────────────────────────
+// DataManager Shutdown Control
+// ─────────────────────────────────────────────
+
+std::mutex versionMutex;
+std::condition_variable versionCondition;
+std::atomic<bool> shouldDataManagerRun = true;
+
+void stopDataManagerWorker() {
+    shouldDataManagerRun.store(false);
+    versionCondition.notify_all();
+    return;
 }

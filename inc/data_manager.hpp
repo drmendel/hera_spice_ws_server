@@ -1,9 +1,12 @@
 #ifndef DATA_MANAGER_HPP
 #define DATA_MANAGER_HPP
 
-// C++ Standard Libraries
+// Standard C++ Libraries
+#include <mutex>
+#include <atomic>
 #include <string>
 #include <filesystem>
+#include <condition_variable>
 
 // External Libraries
 #include <curl/curl.h>
@@ -89,5 +92,13 @@ public:
     bool deleteZipFile();                               // Delete the downloaded zip file
     void updateLocalVersion();                          // Update the local version in the memory to the new version
 };
+
+// ─────────────────────────────────────────────
+// DataManager Shutdown Control
+// ─────────────────────────────────────────────
+extern std::mutex versionMutex;
+extern std::condition_variable versionCondition;
+extern std::atomic<bool> shouldDataManagerRun;
+void stopDataManagerWorker();
 
 #endif // DATA_MANAGER_HPP

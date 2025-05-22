@@ -1,7 +1,11 @@
 // C++ Standard Libraries
 #include <condition_variable>
 #include <unordered_set>
+#include <string_view>
+#include <iostream>
+#include <cstdint>
 #include <atomic>
+#include <mutex>
 #include <queue>
 
 // External Libraries
@@ -124,7 +128,7 @@ uWS::App* app = nullptr;
 uWS::Loop* loop = nullptr;
 us_listen_socket_t* listenSocket = nullptr;
 
-void shutdownServer() {
+void stopWebSocketManagerWorker() {
     std::unique_lock<std::mutex> lock(socketMutex); 
 
         std::cout << "\n" << color("log") <<"Shutdown requested...\n";

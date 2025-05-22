@@ -1,5 +1,11 @@
-// C++ Standard Libraries
+// Standard C++ Libraries
 #include <condition_variable>
+#include <csignal>
+#include <chrono>
+#include <mutex>
+
+// External Libraries
+#include <uWebSockets/App.h>
 
 // Project Headers
 #include <websocket_manager.hpp>
@@ -13,10 +19,6 @@
 // ─────────────────────────────────────────────
 // SPICE Kernel Update Thread - DataManager
 // ─────────────────────────────────────────────
-
-std::mutex versionMutex;
-std::condition_variable versionCondition;
-std::atomic<bool> shouldDataManagerRun;
 
 void signalSpiceDataAvailable() {
     {
@@ -37,7 +39,6 @@ void signalSpiceDataUnavailable() {
 
 void dataManagerWorker(int syncInterval) {
     DataManager dataManager;
-    bool newVersionAvailable;
 
     if(dataManager.getLocalVersion() !=  "default") {
         initSpiceCore();
@@ -47,21 +48,21 @@ void dataManagerWorker(int syncInterval) {
     while (true) {
         std::unique_lock<std::mutex> lock(versionMutex);
         
-        newVersionAvailable = dataManager.isNewVersionAvailable();
         versionCondition.wait_for(lock, std::chrono::seconds(syncInterval), [&]() {
             return !shouldDataManagerRun.load();
         });
 
-        if (!shouldDataManagerRun.load()) return;       // Exit if thread shutdown requested
-        if(!newVersionAvailable) continue;              // Continue if no new version available
+        if(!shouldDataManagerRun.load()) {
+            deinitSpiceCore();
+            break;                                              // Exit if thread shutdown requested
+        }
+        if(!dataManager.isNewVersionAvailable()) continue;      // Continue if no new version available
 
-        if(!dataManager.downloadZipFile()) continue;    // Continue if download failed
-        if (!shouldDataManagerRun.load()) return;       // Exit if thread shutdown requested
-        dataManager.unzipZipFile();
-        if (!shouldDataManagerRun.load()) return;       // Exit if thread shutdown requested
+        if(!dataManager.downloadZipFile()) continue;            // Continue if download failed
+        if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
         dataManager.deleteZipFile();
-        dataManager.editTempMetaKernelFiles();
-        dataManager.editTempVersionFile();
+        if(!dataManager.editTempMetaKernelFiles()) continue;    // Continue if editing meta-kernel files failed;
+        if(!dataManager.editTempVersionFile()) continue;
 
         signalSpiceDataUnavailable();
         deinitSpiceCore();                              // Unload kernel files
@@ -71,6 +72,8 @@ void dataManagerWorker(int syncInterval) {
         
         dataManager.updateLocalVersion();               // Update local version in memory
     }
+
+    return;
 }
 
 
@@ -113,22 +116,20 @@ std::thread* webSocketManagerPointer = nullptr;
 
 void gracefulShutdown(std::thread* dataManagerPointer, std::thread* webSocketManagerPointer) {
     if (shuttingDown.exchange(true)) return;
-    shouldDataManagerRun.store(false);
-    versionCondition.notify_all();
-    shutdownServer();
     shuttingDown.store(true);
     shutdownCV.notify_all();
 
+    stopDataManagerWorker();
+    stopWebSocketManagerWorker();
     if(dataManagerPointer->joinable()) dataManagerPointer->join();
     if(webSocketManagerPointer->joinable()) webSocketManagerPointer->join();
-    deinitSpiceCore();
 
     std::cout << color("reset") << "\nServer stopped gracefully!\n";
-    std::exit(0);
 }
 
 void handleSignal(int signal) {
-    if (signal == SIGTERM || signal == SIGINT) {
+    if (signal == SIGTERM) {
         gracefulShutdown(dataManagerPointer, webSocketManagerPointer);
+        std::exit(SUCCESSFUL_EXIT);
     }
 }

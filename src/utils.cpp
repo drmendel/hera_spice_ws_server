@@ -9,7 +9,7 @@
 void checkArgc(int argc, char** argv) {
     if (argc < 3) {
         printUsage(argv);
-        std::exit(1);
+        std::exit(ERR_INVALID_ARGUMENTS);
     }
 }
 
@@ -18,15 +18,15 @@ void loadValues(int argc, char** argv, int& port, int& syncInterval) {
         port = std::stoi(argv[1]);
         int tmp = std::stoi(argv[2]);
         syncInterval = tmp > 0 ? tmp : 1;
+        return;
     } catch (const std::invalid_argument& e) {
-        std::cerr << color("error") << "\nError: Port and interval must be valid integers.\n" << color("reset");
-        printUsage(argv);
-        std::exit(1);
+        std::cerr << color("error") << "\nError: Port and interval must be valid integers.\n";
+
     } catch (const std::out_of_range& e) {
-        std::cerr << color("error") << "\nError: Port or interval value out of range.\n" << color("reset");
-        printUsage(argv);
-        std::exit(1);
+        std::cerr << color("error") << "\nError: Port or interval value out of range.\n";
     }
+    printUsage(argv);
+    std::exit(ERR_INVALID_ARGUMENTS);
 }
 
 void printUsage(char** argv) {
@@ -61,7 +61,7 @@ std::string color(const std::string type) {
     return "\033[0m";                              // white
 }
 
-void userExit() {
+void waitForExitCommand() {
     std::string command = "notExit";
     while (!shuttingDown.load()) {
         std::cin >> command;
