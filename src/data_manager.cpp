@@ -372,7 +372,7 @@ DataManager::DataManager() {
     exeDirectory = std::filesystem::path(getDefaultSaveDir());
     dataDirectory = exeDirectory / "data";
     heraDirectory = dataDirectory / "hera";
-    heraTemporaryDirectory = dataDirectory / "HERA";
+    heraTemporaryDirectory = dataDirectory / "hera_tmp";
     kernelDirectory = heraDirectory / "kernels";
     tempMetaKernelDirectory = heraTemporaryDirectory / "kernels" / "mk";
     miscDirectory = heraTemporaryDirectory / "misc";
