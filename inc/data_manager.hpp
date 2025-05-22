@@ -70,13 +70,16 @@ private:
     std::filesystem::path heraTemporaryDirectory;       // Temporary directory for unzipping (HERA)
     std::filesystem::path kernelDirectory;              // Active kernel directory (referenced in meta-kernel files)
     std::filesystem::path tempMetaKernelDirectory;      // Temporary directory for modifying meta-kernel paths
+    std::filesystem::path miscDirectory;                // Miscellaneous directory (not used in the current implementation)
+    std::filesystem::path manifestFile;                 // Manifest file (not used in the current implementation)
+    std::filesystem::path readmeFile;                   // Readme file (not used in the current implementation)
 
     // File Paths
     std::filesystem::path zipFile;                      // Path to the downloaded zip file (HERA.zip)
 
     // Version Management
-    void loadLocalVersion();                     // Load the local version from the version file
-    void loadRemoteVersion();                    // Load the remote version from the URL
+    void loadLocalVersion();                            // Load the local version from the version file
+    void loadRemoteVersion();                           // Load the remote version from the URL
 
 public:
     DataManager();
@@ -91,6 +94,7 @@ public:
     bool moveFolder();                                  // Move the unzipped folder to the data directory   
     bool deleteZipFile();                               // Delete the downloaded zip file
     void updateLocalVersion();                          // Update the local version in the memory to the new version
+    bool deleteUnUsableFiles();
 };
 
 // ─────────────────────────────────────────────

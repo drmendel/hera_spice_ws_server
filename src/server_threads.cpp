@@ -56,7 +56,8 @@ void dataManagerWorker(int syncInterval) {
         if(dataManager.isNewVersionAvailable()) {
             if(!dataManager.downloadZipFile()) continue;            // Continue if download failed
             if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
-            dataManager.deleteZipFile();
+            dataManager.deleteZipFile();                            // Delete zip file after unzipping
+            dataManager.deleteUnUsableFiles();                      // Delete unnessesary unzipped files
             if(!dataManager.editTempMetaKernelFiles()) continue;    // Continue if editing meta-kernel files failed;
             if(!dataManager.editTempVersionFile()) continue;
 

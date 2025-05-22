@@ -375,6 +375,9 @@ DataManager::DataManager() {
     heraTemporaryDirectory = dataDirectory / "HERA";
     kernelDirectory = heraDirectory / "kernels";
     tempMetaKernelDirectory = heraTemporaryDirectory / "kernels" / "mk";
+    miscDirectory = heraTemporaryDirectory / "misc";
+    manifestFile = heraTemporaryDirectory / "MANIFEST.in";
+    readmeFile = heraTemporaryDirectory / "README.md";
 
     zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(zipUrl));
 
@@ -440,6 +443,31 @@ bool DataManager::deleteZipFile() {
 
 void DataManager::updateLocalVersion() {
     localVersion = remoteVersion;
+}
+
+bool DataManager::deleteUnUsableFiles() {
+    std::error_code ec;
+    bool success = true;
+
+    if (!std::filesystem::remove_all(miscDirectory, ec)) {
+        std::cerr << color("error") << "Error deleting "
+                  << miscDirectory << ": " << ec.message() << std::endl;
+        success = false;
+    } else std::cout << color("log") << "Deleted: " << miscDirectory << std::endl;
+
+    if (!std::filesystem::remove_all(manifestFile, ec)) {
+        std::cerr << color("error") << "Error deleting "
+                  << manifestFile << ": " << ec.message() << std::endl;
+        success = false;
+    } else std::cout << color("log") << "Deleted: " << manifestFile << std::endl;
+
+    if (!std::filesystem::remove_all(readmeFile, ec)) {
+        std::cerr << color("error") << "Error deleting "
+                  << readmeFile << ": " << ec.message() << std::endl;
+        success = false;
+    } else std::cout << color("log") << "Deleted: " << readmeFile << std::endl;
+
+    return success;
 }
 
 
