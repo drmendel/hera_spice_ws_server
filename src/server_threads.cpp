@@ -33,11 +33,11 @@ void dataManagerWorker(int syncInterval) {
             if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
             if(!dataManager.editTempMetaKernelFiles()) continue;    // Continue if editing meta-kernel files failed;
             if(!dataManager.editTempVersionFile()) continue;        // Continue if editing version file failed
-            if(!dataManager.deleteUnUsedFiles()) continue;        // Continue if deleting unneeded files failed
+            if(!dataManager.deleteUnUsedFiles()) continue;          // Continue if deleting unneeded files failed
 
-            dataManager.makeSpiceDataUnavailable();
+            dataManager.makeSpiceDataUnavailable();                 // Notify webSocket thread then unload SPICE data
             dataManager.moveFolder();                               // WebSocket responses are disabled while SPICE data is being updated.
-            dataManager.makeSpiceDataAvailable();                   // Notify SPICE data is available
+            dataManager.makeSpiceDataAvailable();                   // Load new SPICE data then notify webSocket thread
             
             dataManager.deleteTmpFolder();                          // Delete the temporary folder
         }
