@@ -64,7 +64,6 @@ void dataManagerWorker(int syncInterval) {
 
 void webSocketManagerWorker(int port) {
     uWS::App threadApp;
-    loop = uWS::Loop::get();
     threadApp.ws<PerSocketData>("/ws/", {
         .open = onOpen,
         .message = onMessage,
@@ -76,9 +75,7 @@ void webSocketManagerWorker(int port) {
             std::cerr << color("error") << "\nFailed to listen on port " << port << ".\n" << std::endl;
             exit(1);
         }
-    });
-    app = &threadApp;
-    threadApp.run();
+    }).run();
 }
 
 

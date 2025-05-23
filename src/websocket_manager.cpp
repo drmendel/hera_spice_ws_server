@@ -124,8 +124,6 @@ void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, st
 // WebSocket Shutdown Control
 // ─────────────────────────────────────────────
 
-uWS::App* app = nullptr;
-uWS::Loop* loop = nullptr;
 us_listen_socket_t* listenSocket = nullptr;
 
 void stopWebSocketManagerWorker() {
