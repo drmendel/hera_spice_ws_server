@@ -4,6 +4,9 @@
 // Standard C++ Libraries
 #include <string>
 
+// #define DEBUG
+// #define DOCKER
+
 #define SUCCESSFUL_EXIT 0
 #define ERR_INVALID_ARGUMENTS 1
 

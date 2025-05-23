@@ -98,7 +98,7 @@ void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view 
     Request request(message);
     ws->send(request.getMessage(), opCode);
 
-    #ifndef DOCKER
+    #ifndef DEBUG
         printResponse(request.getMessage());
     #endif
 }
