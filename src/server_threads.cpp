@@ -73,7 +73,7 @@ void webSocketManagerWorker(int port) {
         if (socket) std::cout << color("log") << "\nServer listening on port " << port << ".\n" << std::endl;
         else {
             std::cerr << color("error") << "\nFailed to listen on port " << port << ".\n" << std::endl;
-            exit(1);
+            exit(ERR_SOCKET_NULL);
         }
     }).run();
 }

@@ -9,6 +9,7 @@
 
 #define SUCCESSFUL_EXIT 0
 #define ERR_INVALID_ARGUMENTS 1
+#define ERR_SOCKET_NULL 2
 
 #define NO_VERSION "no_version"
 
