@@ -23,7 +23,7 @@
 void dataManagerWorker(int syncInterval) {
     DataManager dataManager;
 
-    if(dataManager.getLocalVersion() !=  "default") {
+    if(dataManager.getLocalVersion() !=  NO_VERSION) {
         dataManager.makeSpiceDataAvailable();
     }
 
