@@ -12,13 +12,6 @@
 // SPICE Kernel Update Thread - DataManager
 // ─────────────────────────────────────────────
 
-extern std::mutex versionMutex;
-extern std::condition_variable versionCondition;
-extern std::atomic<bool> shouldDataManagerRun;
-
-void signalSpiceDataAvailable();
-void signalSpiceDataUnavailable();
-
 /*  
  * Periodically checks for a new Hera kernel version every 'hoursToWait' hours.  
  * If an update is available, downloads, extracts, modifies and replaces the kernel files.  

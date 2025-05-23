@@ -1,11 +1,11 @@
 // C++ Standard Library
-#include <filesystem>           // File path and directory handling (create_directories, current_path)
-#include <algorithm>            // Utility algorithms (max)
-#include <iostream>             // Console input/output (cout, cerr)
-#include <fstream>              // File reading and writing
-#include <cstring>              // String manipulation (strlen)
-#include <vector>               // Dynamic array storage
-#include <array>                // Fixed-size data storage
+#include <filesystem>               // File path and directory handling (create_directories, current_path)
+#include <algorithm>                // Utility algorithms (max)
+#include <iostream>                 // Console input/output (cout, cerr)
+#include <fstream>                  // File reading and writing
+#include <cstring>                  // String manipulation (strlen)
+#include <vector>                   // Dynamic array storage
+#include <array>                    // Fixed-size data storage
 
 // System Libraries
 #ifdef __linux__
@@ -16,12 +16,14 @@
 #endif
 
 // External Libraries
-#include <minizip/unzip.h>      // ZIP extraction (unzFile, unzOpen, unzReadCurrentFile)
-#include <curl/curl.h>          // Network requests (file downloads, update checks)
+#include <minizip/unzip.h>          // ZIP extraction (unzFile, unzOpen, unzReadCurrentFile)
+#include <curl/curl.h>              // Network requests (file downloads, update checks)
 
 // Project Headers
-#include <data_manager.hpp>     // DataManager class and function definitions
-#include <utils.hpp>            // Utility function (color)
+#include <websocket_manager.hpp>    // WebSocket connection management (ConnectionIDAllocator, PerSocketData)
+#include <data_manager.hpp>         // DataManager class and function definitions
+#include <spice_core.hpp>           // SPICE kernel management (initSpiceCore, deinitSpiceCore)
+#include <utils.hpp>                // Utility function (color)
 
 
 
@@ -119,7 +121,8 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
         return false;
     }
 
-    std::string savePath = (saveDirectory / getFilenameFromUrl(url)).string();
+    std::filesystem::path savePath = (saveDirectory / getFilenameFromUrl(url));
+    std::string savePathString = savePath.string();
 
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -127,9 +130,9 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
         return false;
     }
 
-    std::ofstream file(savePath, std::ios::binary);
+    std::ofstream file(savePathString, std::ios::binary);
     if (!file) {
-        std::cerr << color("error") << "Failed to open file: " << savePath << std::endl;
+        std::cerr << color("error") << "Failed to open file: " << savePathString << std::endl;
         curl_easy_cleanup(curl);
         return false;
     }
@@ -151,7 +154,7 @@ bool downloadFile(const std::string& url, const std::filesystem::path& saveDirec
 
     if (res != CURLE_OK) {
         std::cerr << color("error") << "CURL error: " << curl_easy_strerror(res) << std::endl;
-        std::filesystem::remove(savePath);
+        std::filesystem::remove(savePathString);
         return false;
     }
 
@@ -252,6 +255,14 @@ bool unzipRecursive(const std::filesystem::path& zipFilePath, std::filesystem::p
     return true;
 }
 
+void makeSpiceCoreAvailable() {
+    initSpiceCore();
+}
+
+void makeSpiceCoreUnavailable() {
+    deinitSpiceCore();
+}
+
 
 
 // ─────────────────────────────────────────────
@@ -331,7 +342,7 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
         if (ec) std::cerr << color("warn") << "Warning: Failed to remove target directory: " << ec.message() << "\n";
         
         std::filesystem::rename(source, target);
-        std::cout << color("log") << "Renamed: " << source << " to " << target << "\n" << std::endl;
+        std::cout << color("log") << "Moved: " << source << " to " << target << "\n";
         return true;
     }
     catch (const std::exception& e) {
@@ -351,13 +362,16 @@ DataManager::DataManager() {
     dataDirectory = projectDirectory / "data";
     heraDirectory = dataDirectory / "hera";
     kernelDirectory = heraDirectory / "kernels";
-    temporaryHeraDirectory = dataDirectory / "hera_tmp";
+
+    temporaryDirectory = dataDirectory / "tmp";
+    temporaryHeraDirectory = dataDirectory / "tmp" /"HERA";
     temporaryMetaKernelDirectory = temporaryHeraDirectory / "kernels" / "mk";
     temporaryMiscDirectory = temporaryHeraDirectory / "misc";
     temporaryManifestFile = temporaryHeraDirectory / "MANIFEST.in";
     temporaryReadmeFile = temporaryHeraDirectory / "README.md";
+    temporaryVersionFile = temporaryHeraDirectory / "version";
 
-    zipFile = dataDirectory / std::filesystem::path(getFilenameFromUrl(REMOTE_ARCHIVE_URL));
+    zipFile = temporaryDirectory / std::filesystem::path(getFilenameFromUrl(REMOTE_ARCHIVE_URL));
 
     versionFile = heraDirectory / "version";
 }
@@ -391,11 +405,11 @@ bool DataManager::isNewVersionAvailable() {
 }    
 
 bool DataManager::downloadZipFile() {
-    return downloadFile(REMOTE_ARCHIVE_URL, dataDirectory);
+    return downloadFile(REMOTE_ARCHIVE_URL, temporaryDirectory);
 }
 
 bool DataManager::unzipZipFile() {
-    return unzipRecursive(zipFile, dataDirectory);
+    return unzipRecursive(zipFile, temporaryDirectory);
 }
 
 bool DataManager::editTempMetaKernelFiles() {
@@ -408,7 +422,7 @@ bool DataManager::editTempVersionFile() {
         std::cerr << color("error") << "No version file found." << std::endl;
         return false;
     }
-    versionFile << remoteVersion;
+    versionFile << getRemoteVersion();
     versionFile.close();
     std::cout << color("log") << "Updated temporary version file.\n";
     return true;
@@ -418,17 +432,17 @@ bool DataManager::moveFolder() {
     return replaceDirectory(temporaryHeraDirectory, heraDirectory);
 }
 
-bool DataManager::deleteZipFile() {
+bool DataManager::deleteTmpFolder() {
     std::error_code ec;
-    if (!std::filesystem::remove(zipFile, ec)) {
-        std::cerr << color("error") << "Error deleting " << zipFile << ": " << ec.message() << std::endl;
+    if (!std::filesystem::remove_all(temporaryDirectory, ec)) {
+        std::cerr << color("error") << "Error deleting " << temporaryDirectory << ": " << ec.message() << std::endl;
         return false;
     }
-    std::cout << color("log") << "\nDeleted: " << zipFile << std::endl;
+    std::cout << color("log") << "Deleted: " << temporaryDirectory << "\n" << std::endl;
     return true;
 }
 
-bool DataManager::deleteUnUsableFiles() {
+bool DataManager::deleteUnUsedFiles() {
     std::error_code ec;
     bool success = true;
 
@@ -451,6 +465,38 @@ bool DataManager::deleteUnUsableFiles() {
     } else std::cout << color("log") << "Deleted: " << temporaryReadmeFile << std::endl;
 
     return success;
+}
+
+void DataManager::makeSpiceDataAvailable() {
+    initSpiceCore();
+    signalSpiceDataAvailable();
+}
+
+void DataManager::makeSpiceDataUnavailable() {
+    signalSpiceDataUnavailable();
+    deinitSpiceCore();
+}
+
+
+
+// ─────────────────────────────────────────────
+// Thread Communication
+// ─────────────────────────────────────────────
+
+void signalSpiceDataAvailable() {
+    {
+        std::unique_lock<std::mutex> lock(spiceMutex);
+        spiceDataAvailable = true;
+    }
+    spiceCondition.notify_all();
+}
+
+void signalSpiceDataUnavailable() {
+    {
+        std::lock_guard<std::mutex> lock(spiceMutex);
+        spiceDataAvailable = false;
+    }
+    spiceCondition.notify_all();
 }
 
 

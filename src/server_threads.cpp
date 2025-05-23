@@ -20,45 +20,26 @@
 // SPICE Kernel Update Thread - DataManager
 // ─────────────────────────────────────────────
 
-void signalSpiceDataAvailable() {
-    {
-        std::unique_lock<std::mutex> lock(spiceMutex);
-        spiceDataAvailable = true;
-    }
-    spiceCondition.notify_all();
-}
-
-void signalSpiceDataUnavailable() {
-    {
-        std::lock_guard<std::mutex> lock(spiceMutex);
-        spiceDataAvailable = false;
-    }
-    spiceCondition.notify_all();
-    deinitSpiceCore();
-}
-
 void dataManagerWorker(int syncInterval) {
     DataManager dataManager;
 
     if(dataManager.getLocalVersion() !=  "default") {
-        initSpiceCore();
-        signalSpiceDataAvailable();
+        dataManager.makeSpiceDataAvailable();
     }
 
     while (true) {    
         if(dataManager.isNewVersionAvailable()) {
             if(!dataManager.downloadZipFile()) continue;            // Continue if download failed
             if(!dataManager.unzipZipFile()) continue;               // Continue if unzip failed
-            dataManager.deleteZipFile();                            // Delete zip file after unzipping
-            dataManager.deleteUnUsableFiles();                      // Delete unnessesary unzipped files
             if(!dataManager.editTempMetaKernelFiles()) continue;    // Continue if editing meta-kernel files failed;
-            if(!dataManager.editTempVersionFile()) continue;
+            if(!dataManager.editTempVersionFile()) continue;        // Continue if editing version file failed
+            if(!dataManager.deleteUnUsedFiles()) continue;        // Continue if deleting unneeded files failed
 
-            signalSpiceDataUnavailable();
-            deinitSpiceCore();                              // Unload kernel files
-            dataManager.moveFolder();                       // WebSocket responses are disabled while SPICE data is being updated.
-            initSpiceCore();                                // Load kernel files
-            signalSpiceDataAvailable();                     // Notify SPICE data is available
+            dataManager.makeSpiceDataUnavailable();
+            dataManager.moveFolder();                               // WebSocket responses are disabled while SPICE data is being updated.
+            dataManager.makeSpiceDataAvailable();                   // Notify SPICE data is available
+            
+            dataManager.deleteTmpFolder();                          // Delete the temporary folder
         }
         
         std::unique_lock<std::mutex> lock(versionMutex);
@@ -67,8 +48,7 @@ void dataManagerWorker(int syncInterval) {
         });
 
         if(!shouldDataManagerRun.load()) {
-            signalSpiceDataUnavailable();
-            deinitSpiceCore();
+            dataManager.makeSpiceDataUnavailable();
             break;                                                  // Exit if thread shutdown requested
         }
     }

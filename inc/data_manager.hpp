@@ -65,11 +65,13 @@ private:
     std::filesystem::path heraDirectory;                // Main Hera directory (data is used from here)
     std::filesystem::path kernelDirectory;              // Active kernel directory (referenced in meta-kernel files)
 
+    std::filesystem::path temporaryDirectory;           // Temporary directory
     std::filesystem::path temporaryHeraDirectory;       // Temporary directory for unzipping (HERA)
     std::filesystem::path temporaryMetaKernelDirectory; // Temporary directory for modifying meta-kernel paths
     std::filesystem::path temporaryMiscDirectory;       // Miscellaneous directory (not used in the current implementation)
     std::filesystem::path temporaryManifestFile;        // Manifest file (not used in the current implementation)
     std::filesystem::path temporaryReadmeFile;          // Readme file (not used in the current implementation)
+    std::filesystem::path temporaryVersionFile;         // Temporary version file (not used in the current implementation)
 
     // File Paths
     std::filesystem::path zipFile;                      // Path to the downloaded zip file (HERA.zip)
@@ -85,10 +87,19 @@ public:
     bool unzipZipFile();                                // Unzip the downloaded zip file
     bool editTempMetaKernelFiles();                     // Edit the temporary meta-kernel files ('..' -> 'actual/kernel/path') 
     bool editTempVersionFile();                         // Edit the temporary version file (update the version file in the new directory)
-    bool moveFolder();                                  // Move the unzipped folder to the data directory   
-    bool deleteZipFile();                               // Delete the downloaded zip file
-    bool deleteUnUsableFiles();
+    bool moveFolder();                                  // Move the unzipped folder to the data directory
+    bool deleteTmpFolder();                             // Delete the temporary folder
+    bool deleteUnUsedFiles();                           // Delete unneeded files (manifest, readme, etc.) from the temporary directory
+
+    void makeSpiceDataAvailable();
+    void makeSpiceDataUnavailable();
 };
+
+// ─────────────────────────────────────────────
+// Thread Communication
+// ─────────────────────────────────────────────
+void signalSpiceDataAvailable();
+void signalSpiceDataUnavailable();
 
 // ─────────────────────────────────────────────
 // DataManager Shutdown Control
