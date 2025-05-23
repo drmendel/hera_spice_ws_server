@@ -93,9 +93,10 @@ void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view 
 
     std::unique_lock<std::mutex> lock(spiceMutex);
     spiceCondition.wait(lock, [] { return spiceDataAvailable.load(); });
-    lock.unlock();
-
+    
     Request request(message);
+    lock.unlock();
+    
     ws->send(request.getMessage(), opCode);
 
     #ifndef DEBUG
