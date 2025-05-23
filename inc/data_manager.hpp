@@ -87,7 +87,6 @@ public:
     bool editTempVersionFile();                         // Edit the temporary version file (update the version file in the new directory)
     bool moveFolder();                                  // Move the unzipped folder to the data directory   
     bool deleteZipFile();                               // Delete the downloaded zip file
-    void updateLocalVersion();                          // Update the local version in the memory to the new version
     bool deleteUnUsableFiles();
 };
 
