@@ -60,7 +60,7 @@ private:
     std::filesystem::path versionFile;
 
     // Directory Paths
-    std::filesystem::path exeDirectory;                 // Directory where the executable is located (build)
+    std::filesystem::path projectDirectory;             // Parent of the executable's parent folder
     std::filesystem::path dataDirectory;                // Data directory (where the zip file - HERA.zip - is downloaded
     std::filesystem::path heraDirectory;                // Main Hera directory (data is used from here)
     std::filesystem::path kernelDirectory;              // Active kernel directory (referenced in meta-kernel files)

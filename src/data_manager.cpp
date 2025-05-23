@@ -347,8 +347,8 @@ bool replaceDirectory(const std::filesystem::path& source, const std::filesystem
 // ─────────────────────────────────────────────
 
 DataManager::DataManager() {
-    exeDirectory = std::filesystem::path(getDefaultSaveDir());
-    dataDirectory = exeDirectory / "data";
+    projectDirectory = std::filesystem::path(getDefaultSaveDir());  // parent of the executabels parent folder
+    dataDirectory = projectDirectory / "data";
     heraDirectory = dataDirectory / "hera";
     kernelDirectory = heraDirectory / "kernels";
     temporaryHeraDirectory = dataDirectory / "hera_tmp";
