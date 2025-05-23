@@ -378,7 +378,7 @@ DataManager::DataManager() {
 
 std::string DataManager::getLocalVersion() {
     std::ifstream file(versionFile);
-    if (!file.is_open()) return "default";
+    if (!file.is_open()) return NO_VERSION;
 
     std::string localVersion;
     std::getline(file, localVersion);

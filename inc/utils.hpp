@@ -7,6 +7,8 @@
 #define SUCCESSFUL_EXIT 0
 #define ERR_INVALID_ARGUMENTS 1
 
+#define NO_VERSION "no_version"
+
 void loadValues(int argc, char** argv, int& port, int& syncInterval);
 void checkArgc(int argc, char** argv);
 void printUsage(char** argv);
