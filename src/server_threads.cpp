@@ -68,7 +68,7 @@ void webSocketManagerWorker(int port) {
         .open = onOpen,
         .message = onMessage,
         .close = onClose
-    }).listen(port, [port](auto *socket) {
+    }).listen(port, [port](us_listen_socket_t* socket) {
         listenSocket = socket;
         if (socket) std::cout << color("log") << "\nServer listening on port " << port << ".\n" << std::endl;
         else {
