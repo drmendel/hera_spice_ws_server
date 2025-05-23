@@ -17,7 +17,7 @@
 
 
 // ─────────────────────────────────────────────
-// SPICE Kernel Update Thread - DataManager
+// DataManagerWorker - Kernel Update Thread
 // ─────────────────────────────────────────────
 
 void dataManagerWorker(int syncInterval) {
@@ -59,7 +59,7 @@ void dataManagerWorker(int syncInterval) {
 
 
 // ─────────────────────────────────────────────
-// uWebSocket Thread - WebSocketManager
+// WebSocketManagerWorker - uWebSockets Thread
 // ─────────────────────────────────────────────
 
 void webSocketManagerWorker(int port) {
