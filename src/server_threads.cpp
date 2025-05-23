@@ -64,7 +64,7 @@ void dataManagerWorker(int syncInterval) {
 
 void webSocketManagerWorker(int port) {
     uWS::App threadApp;
-    threadApp.ws<PerSocketData>("/ws/", {
+    threadApp.ws<PerSocketData>(ENTRY_POINT, {
         .open = onOpen,
         .message = onMessage,
         .close = onClose

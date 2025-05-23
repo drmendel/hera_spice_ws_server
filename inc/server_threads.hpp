@@ -8,6 +8,8 @@
 // Project Headers
 #include <websocket_manager.hpp>
 
+#define ENTRY_POINT "/ws/"
+
 // ─────────────────────────────────────────────
 // SPICE Kernel Update Thread - DataManager
 // ─────────────────────────────────────────────
