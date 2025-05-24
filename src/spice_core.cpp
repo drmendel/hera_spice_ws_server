@@ -168,6 +168,23 @@ std::string Request::getMessage() const {
     return message;
 }
 
+bool kernelPathsLoaded = false;
+
+std::filesystem::path cremaMetakernel;
+std::filesystem::path operationalMetakernel;
+std::filesystem::path planMetakernel;
+
+bool loadKernelPaths() {
+    std::filesystem::path parentFolder = getExecutablePath().parent_path().parent_path();
+
+    cremaMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_crema_2_1.tm";
+    planMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_plan.tm";
+    operationalMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_ops.tm";
+    
+    kernelPathsLoaded = true;
+    return true;
+}
+
 
 
 // ─────────────────────────────────────────────
@@ -175,14 +192,8 @@ std::string Request::getMessage() const {
 // ─────────────────────────────────────────────
 
 void initSpiceCore() {
-    std::filesystem::path parentFolder = getExecutablePath().parent_path().parent_path();
-    
-    // std::filesystem::path studyMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_study_PO_EMA_2024.tm";
-    std::filesystem::path cremaMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_crema_2_1.tm";
-    std::filesystem::path operationalMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_ops.tm";
-    std::filesystem::path planMetakernel = parentFolder / "data" / "hera" / "kernels" / "mk" / "hera_plan.tm";
+    if(!kernelPathsLoaded) loadKernelPaths();
 
-    // furnsh_c(studyMetakernel.c_str());
     furnsh_c(cremaMetakernel.c_str());
     furnsh_c(operationalMetakernel.c_str());
     furnsh_c(planMetakernel.c_str());
@@ -190,6 +201,12 @@ void initSpiceCore() {
 
 void deinitSpiceCore() {
     kclear_c();
+}
+
+SpiceDouble etTime(SpiceDouble utcTimestamp) {
+    SpiceDouble et;
+    str2et_c(utcTimeString(utcTimestamp).c_str(), &et);
+    return et;
 }
 
 std::string getBodyFixedFrameName(SpiceInt id) {
@@ -257,13 +274,6 @@ std::string utcTimeString(SpiceDouble utcTimestamp) {
     }
 
     return utcStream.str();
-}
-
-
-SpiceDouble etTime(SpiceDouble utcTimestamp) {
-    SpiceDouble et;
-    str2et_c(utcTimeString(utcTimestamp).c_str(), &et);
-    return et;
 }
 
 std::string getName(SpiceInt id) {

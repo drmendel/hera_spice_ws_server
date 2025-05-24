@@ -3,6 +3,7 @@
 
 // Standard C++ Libraries
 #include <unordered_map>
+#include <filesystem>
 #include <cstdint>
 #include <string>
 
@@ -110,11 +111,15 @@ public:
 // ─────────────────────────────────────────────
 // SPICE Core Management
 // ─────────────────────────────────────────────
+extern bool kernelPathsLoaded;
+extern std::filesystem::path cremaMetakernel;
+extern std::filesystem::path operationalMetakernel;
+extern std::filesystem::path planMetakernel;
 void initSpiceCore();
 void deinitSpiceCore();
+SpiceDouble etTime(SpiceDouble utcTimestamp);
 std::string getBodyFixedFrameName(SpiceInt id);
 std::string utcTimeString(SpiceDouble utcTimestamp);
-SpiceDouble etTime(SpiceDouble utcTimestamp);
 std::string getName(SpiceInt id);
 
 // ─────────────────────────────────────────────
