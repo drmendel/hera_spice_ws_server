@@ -101,7 +101,7 @@ void gracefulShutdown(std::thread* dataManagerPointer, std::thread* webSocketMan
     if(dataManagerPointer->joinable()) dataManagerPointer->join();
     if(webSocketManagerPointer->joinable()) webSocketManagerPointer->join();
 
-    std::cout << color("reset") << "\nServer stopped gracefully!\n";
+    std::cout << color("log") << "\nServer stopped gracefully!\n";
 }
 
 void handleSignal(int signal) {
