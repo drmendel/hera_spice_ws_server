@@ -40,15 +40,16 @@ extern ConnectionIDAllocator idAllocator;
 struct PerSocketData {
     uint64_t id;
 };
+using WS = uWS::WebSocket<false, uWS::SERVER, PerSocketData>;
 extern std::mutex socketMutex;
-extern std::unordered_set<uWS::WebSocket<false, true, PerSocketData>*> activeSockets;
+extern std::unordered_set<WS*> activeSockets;
 
 // ─────────────────────────────────────────────
 // WebSocket Event Handlers
 // ─────────────────────────────────────────────
-void onOpen(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws);
-void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view message, uWS::OpCode opCode);
-void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, std::string_view message);
+void onOpen(WS *ws);
+void onMessage(WS *ws, std::string_view message, uWS::OpCode opCode);
+void onClose(WS *ws, int code, std::string_view message);
 
 // ─────────────────────────────────────────────
 // WebSocket Shutdown Control

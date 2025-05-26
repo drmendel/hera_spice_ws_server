@@ -13,6 +13,8 @@
 
 #define NO_VERSION "no_version"
 
+#define EXPECTED_MESSAGE_LENGTH 13
+
 void loadValues(int argc, char** argv, int& port, int& syncInterval);
 void checkArgc(int argc, char** argv);
 void printUsage(char** argv);

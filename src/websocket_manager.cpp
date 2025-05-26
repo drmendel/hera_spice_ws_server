@@ -36,7 +36,7 @@ uint64_t ConnectionIDAllocator::allocate() {
     std::lock_guard<std::mutex> lock(mutex);
 
     uint64_t id;
-    if (!availableIDs.empty()) { 
+    if (!availableIDs.empty()) {
         id = availableIDs.front();
         availableIDs.pop();
     }
@@ -69,54 +69,57 @@ std::unordered_set<uWS::WebSocket<false, true, PerSocketData>*> activeSockets;
 // WebSocket Event Handlers
 // ─────────────────────────────────────────────
 
-void onOpen(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws) {
+void onOpen(WS* ws) {
     PerSocketData* data = ws->getUserData();
-    if (data) {
-        data->id = idAllocator.allocate();
-        activeConnections.fetch_add(1, std::memory_order_relaxed);
+    if (!data) return; 
 
-        std::cout << color("connect") << "Client connected with ID:    [" << data->id << "]\n";
-        std::cout << color("log") << "Active connections:          [" << activeConnections.load() << "]" << "\n\n" << std::flush;
-    }
-    
-    {
-        std::lock_guard<std::mutex> lock(socketMutex);
-        activeSockets.insert(reinterpret_cast<uWS::WebSocket<false, true, PerSocketData>*>(ws));
-    }
+    data->id = idAllocator.allocate();
+    activeConnections.fetch_add(1, std::memory_order_relaxed);
+
+    std::cout << color("connect")
+              << "Client connected with ID:    [" << data->id << "]\n";
+    std::cout << color("log")
+              << "Active connections:          [" << activeConnections.load() << "]" << "\n\n";
+
+    std::lock_guard<std::mutex> lock(socketMutex);
+    activeSockets.insert(ws);
 }
 
-void onMessage(uWS::WebSocket<false, true, PerSocketData> *ws, std::string_view message, uWS::OpCode opCode) {
-    if (message.length() != (sizeof(SpiceDouble) + sizeof(uint8_t) + sizeof(SpiceInt))) { 
+void onMessage(WS* ws, std::string_view message, uWS::OpCode opCode) {
+    if (message.length() != EXPECTED_MESSAGE_LENGTH) {
         ws->send(message, opCode);
         return;
     }
 
-    std::unique_lock<std::mutex> lock(spiceMutex);
-    spiceCondition.wait(lock, [] { return spiceDataAvailable.load(); });
-    
-    Request request(message);
-    lock.unlock();
-    
-    ws->send(request.getMessage(), opCode);
 
-    #ifndef DEBUG
-        printResponse(request.getMessage());
-    #endif
+        std::unique_lock<std::mutex> lock(spiceMutex);
+        spiceCondition.wait(lock, [] { return spiceDataAvailable.load(); });
+
+        Request request(message);
+        lock.unlock();
+
+        ws->send(request.getMessage(), opCode);
+
+        #ifndef DEBUG
+            printResponse(request.getMessage());
+        #endif
+
 }
 
-void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, std::string_view message) {
+void onClose(WS* ws, int code, std::string_view message) {
     PerSocketData* data = ws->getUserData();
-    if (data) {
-        idAllocator.release(data->id);
-        activeConnections.fetch_sub(1, std::memory_order_relaxed);
-        std::cout << color("disconnect")<< "Client disconnected with ID: [" << data->id << "]\n";
-        std::cout << color("log") << "Active connections:          [" << activeConnections.load() << "]" << "\n\n";
-    }
-    
-    {
-        std::lock_guard<std::mutex> lock(socketMutex);
-        activeSockets.erase(reinterpret_cast<uWS::WebSocket<false, true, PerSocketData>*>(ws));
-    }
+    if (!data) return;
+
+    idAllocator.release(data->id);
+    activeConnections.fetch_sub(1, std::memory_order_relaxed);
+
+    std::cout << color("disconnect")
+              << "Client disconnected with ID: [" << data->id << "]\n";
+    std::cout << color("log")
+              << "Active connections:          [" << activeConnections.load() << "]\n\n";
+
+    std::lock_guard<std::mutex> lock(socketMutex);
+    activeSockets.erase(ws);
 }
 
 
@@ -128,7 +131,7 @@ void onClose(uWS::WebSocket<false, uWS::SERVER, PerSocketData> *ws, int code, st
 us_listen_socket_t* listenSocket = nullptr;
 
 void stopWebSocketManagerWorker() {
-    std::unique_lock<std::mutex> lock(socketMutex); 
+    std::unique_lock<std::mutex> lock(socketMutex);
 
         std::cout << "\n" << color("log") <<"Shutdown requested...\n";
         std::cout << "Closing " << activeSockets.size() << " connections..." << std::endl;
