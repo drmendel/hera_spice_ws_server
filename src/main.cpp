@@ -24,10 +24,11 @@ int main(int argc, char* argv[]) {
     
     std::thread dataManagerThread(dataManagerWorker, syncInterval);
     std::thread webSocketManagerThread(webSocketManagerWorker, port);
+    
     dataManagerPointer = &dataManagerThread;
     webSocketManagerPointer = &webSocketManagerThread;
-
     std::signal(SIGTERM, handleSignal);
+
     waitForExitCommand();
     gracefulShutdown(dataManagerPointer, webSocketManagerPointer);
     
