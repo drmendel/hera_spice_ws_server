@@ -512,5 +512,6 @@ std::atomic<bool> shouldDataManagerRun = true;
 void stopDataManagerWorker() {
     shouldDataManagerRun.store(false);
     versionCondition.notify_all();
+    std::cout << color("log") << "\nDataManager shutdown requested.\n" << std::flush;
     return;
 }

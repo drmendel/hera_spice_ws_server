@@ -41,60 +41,44 @@ void ObjectData::serializeToBinary(std::string& buffer) const {
 bool ObjectData::loadState() {
     std::string bodyFixedFrame = getBodyFixedFrameName(objectId);
     if (bodyFixedFrame == "UNKNOWN") {
-        std::cerr << color("error") << "No valid frame found for ID: " << objectId << std::endl;
-        stateAvailable = false;
-        return false;
-    }
-
-    erract_c("SET", 6, (SpiceChar*)"RETURN");       // No abort on error (most spice errors are not fatal)
-
-    #ifndef DEBUG
-        errdev_c("SET", 0, (SpiceChar *)"NULL");    // No std output
-    #endif
-    
-    SpiceDouble spiceState[6], lt;
-
-    SpiceBoolean found = false;
-    SpiceChar objectName[32];
-    SpiceChar observerName[32];
-    bodc2n_c(objectId, 32, objectName, &found);
-    bodc2n_c(observerId, 32, observerName, &found);
-
-    if(objectId == -9102000)        spkezr_c("MILANI", et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT+S") : "NONE", observerName, spiceState, &lt);
-    else if(observerId == -9102000) spkezr_c(objectName, et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT+S") : "NONE", "MILANI", spiceState, &lt);
-    else                            spkez_c(objectId, et, "J2000", lightTimeAdjusted ? (objectId == observerId ? "NONE" : "LT+S") : "NONE", observerId, spiceState, &lt);
-    
-    if (failed_c()) {
-        reset_c();
+        std::cerr << color("error") << "No valid frame found for ID: " << objectId
+                  << std::endl;
         return stateAvailable = false;
     }
 
-    objectState.position = {spiceState[0], spiceState[1], spiceState[2]};
-    objectState.velocity = {spiceState[3], spiceState[4], spiceState[5]};
+    // Position and Velocity
 
+    SpiceDouble spiceState[6], lt;
+    std::string correctionMode = lightTimeAdjusted ? "LT+S" : "NONE";
+    spkez_c(objectId, et, "J2000", correctionMode.c_str(), observerId, spiceState, &lt);
+
+    if (failed_c()) { reset_c(); return stateAvailable = false; }
+
+    objectState.position = { spiceState[0], spiceState[1], spiceState[2] };
+    objectState.velocity = { spiceState[3], spiceState[4], spiceState[5] };   
+   
+    // Quaternion and AngularVelocity
+  
     SpiceDouble xform[6][6];
     SpiceDouble correctedET = lightTimeAdjusted ? et - lt : et;
+    sxform_c(bodyFixedFrame.c_str(), "J2000", correctedET, xform);
     
-    if(objectId == -9102000) sxform_c("MILANI_SPACECRAFT", "J2000", correctedET, xform);
-    else sxform_c(bodyFixedFrame.c_str(), "J2000", correctedET, xform);
-
-    if (failed_c()) {
-        reset_c();
-        return stateAvailable = false;
-    }
-
+    if (failed_c()) { reset_c(); return stateAvailable = false; }
+    
     SpiceDouble rotationMatrix[3][3], quaternion[4], angularVelocity[3];
     xf2rav_c(xform, rotationMatrix, angularVelocity);
     m2q_c(rotationMatrix, quaternion);
 
     /* 
-     * Spice quaternion order: w, x, y, z
+     *    SPICE quaternion order: w, x, y, z
      * Three.js quaternion order: x, y, z, w
      * 
      *  We send quaternion as x, y, z, w to Three.js
      */
-    objectState.orientation = {quaternion[1], quaternion[2], quaternion[3], quaternion[0]};
-    objectState.angularVelocity = {angularVelocity[0], angularVelocity[1], angularVelocity[2]};
+    objectState.orientation =
+        { quaternion[1], quaternion[2], quaternion[3], quaternion[0] };
+    objectState.angularVelocity =
+        { angularVelocity[0], angularVelocity[1], angularVelocity[2] };
 
     return stateAvailable = true;
 }
@@ -102,22 +86,22 @@ bool ObjectData::loadState() {
 
 
 // ─────────────────────────────────────────────
-// Request - processing incoming requests
+// RequestHandler - processing incoming requests
 // ─────────────────────────────────────────────
 
-void Request::setETime(SpiceDouble utcTimestamp) {
+void RequestHandler::setETime(SpiceDouble utcTimestamp) {
     this->et = etTime(utcTimestamp);
 }
 
-void Request::setMode(MessageMode mode) {
+void RequestHandler::setMode(MessageMode mode) {
     this->mode = mode;
 }
 
-void Request::setObserverId(SpiceInt observerId) {
+void RequestHandler::setObserverId(SpiceInt observerId) {
     this->observerId = observerId;
 }
 
-int Request::writeHeader() {
+int RequestHandler::writeHeader() {
     int size = message.size();
     message.append(reinterpret_cast<const char*>(&utcTimestamp), sizeof(utcTimestamp));
     message.append(reinterpret_cast<const char*>(&mode), sizeof(mode));
@@ -125,7 +109,7 @@ int Request::writeHeader() {
     return 0;
 }
 
-int Request::writeData(SpiceBoolean lightTimeAdjusted) {
+int RequestHandler::writeData(SpiceBoolean lightTimeAdjusted) {
     int size = message.size();
     for (const auto& [objectId, name] : objects) {
         ObjectData obj(et, objectId, observerId, lightTimeAdjusted);
@@ -135,7 +119,7 @@ int Request::writeData(SpiceBoolean lightTimeAdjusted) {
     return 0;
 }
 
-Request::Request(std::string_view incomingRequest) : request(incomingRequest) {    
+RequestHandler::RequestHandler(std::string_view incomingRequest) : request(incomingRequest) {    
     std::memcpy(&utcTimestamp, request.data(), sizeof(utcTimestamp));
     this->mode = static_cast<MessageMode>(request[sizeof(utcTimestamp)]);
     std::memcpy(&observerId, request.data() + sizeof(utcTimestamp) + sizeof(mode), sizeof(observerId));
@@ -144,11 +128,11 @@ Request::Request(std::string_view incomingRequest) : request(incomingRequest) {
     this->writeMessage();
 }
 
-void Request::clearMessage() {
+void RequestHandler::clearMessage() {
     this->message.clear();
 }
 
-int Request::writeMessage() {
+int RequestHandler::writeMessage() {
     int error = writeHeader();
     
     if(this->mode != MessageMode::ALL_INSTANTANEOUS && this->mode != MessageMode::ALL_LIGHT_TIME_ADJUSTED) {
@@ -164,7 +148,7 @@ int Request::writeMessage() {
     return -1;
 }
 
-std::string Request::getMessage() const {
+std::string RequestHandler::getMessage() const {
     return message;
 }
 

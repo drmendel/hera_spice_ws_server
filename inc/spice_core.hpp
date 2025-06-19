@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────
 // Objects - all relevant objects in the mission
 // ─────────────────────────────────────────────
-const std::unordered_map<int32_t, std::string_view> objects = {
+const std::unordered_map<SpiceInt, std::string_view> objects = {
     {0, "SOLAR_SYSTEM_BARYCENTER"},
     {10, "SUN"},
     {199, "MERCURY"},
@@ -48,7 +48,7 @@ struct MotionState {
 // ─────────────────────────────────────────────
 class ObjectData {
 public:
-    ObjectData(SpiceDouble et, SpiceInt objectId, SpiceInt observerId, bool lightTimeAdjusted = false);
+    ObjectData(SpiceDouble et, SpiceInt objectId, SpiceInt observerId, bool lightTimeAdjusted);
     void serializeToBinary(std::string& buffer) const;
 private:
     SpiceDouble et;
@@ -74,7 +74,7 @@ enum class MessageMode : uint8_t {
 // ─────────────────────────────────────────────
 // Request - processing incoming requests
 // ─────────────────────────────────────────────
-class Request {
+class RequestHandler {
 private:
     // SPICE ephemeris time
     SpiceDouble et;
@@ -98,7 +98,7 @@ private:
     int writeData(SpiceBoolean lightTimeAdjusted);  // Writes the data to the message buffer: 0 success, 1 failiure
 
 public:
-    Request(std::string_view incomingRequest);
+    RequestHandler(std::string_view incomingRequest);
     
     // Message modifiers
     void clearMessage();

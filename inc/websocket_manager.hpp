@@ -37,10 +37,10 @@ extern ConnectionIDAllocator idAllocator;
 // ─────────────────────────────────────────────
 // WebSocket Connection Data
 // ─────────────────────────────────────────────
-struct PerSocketData {
+struct UserData {
     uint64_t id;
 };
-using WS = uWS::WebSocket<false, uWS::SERVER, PerSocketData>;
+using WS = uWS::WebSocket<false, uWS::SERVER, UserData>;
 extern std::mutex socketMutex;
 extern std::unordered_set<WS*> activeSockets;
 

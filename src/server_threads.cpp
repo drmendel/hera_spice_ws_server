@@ -64,15 +64,18 @@ void dataManagerWorker(int syncInterval) {
 
 void webSocketManagerWorker(int port) {
     uWS::App threadApp;
-    threadApp.ws<PerSocketData>(ENTRY_POINT, {
+    threadApp.ws<UserData>(ENTRY_POINT, {
         .open = onOpen,
         .message = onMessage,
         .close = onClose
     }).listen(port, [port](us_listen_socket_t* socket) {
         listenSocket = socket;
-        if (socket) std::cout << color("log") << "\nServer listening on port " << port << ".\n" << std::endl;
-        else {
-            std::cerr << color("error") << "\nFailed to listen on port " << port << ".\n" << std::endl;
+        if (socket) {
+            std::cout << color("log") << "\nServer listening on port " << port << ".\n\n"
+                      << std::flush;
+        } else {
+            std::cerr << color("error") << "\nFailed to listen on port " << port << ".\n\n"
+                      << std::flush;
             exit(ERR_SOCKET_NULL);
         }
     }).run();
@@ -85,23 +88,18 @@ void webSocketManagerWorker(int port) {
 // ─────────────────────────────────────────────
 
 std::atomic<bool> shuttingDown = false;
-std::mutex shutdownMutex;
-std::condition_variable shutdownCV;
-
 std::thread* dataManagerPointer = nullptr;
 std::thread* webSocketManagerPointer = nullptr;
 
 void gracefulShutdown(std::thread* dataManagerPointer, std::thread* webSocketManagerPointer) {
     if (shuttingDown.exchange(true)) return;
-    shuttingDown.store(true);
-    shutdownCV.notify_all();
 
     stopDataManagerWorker();
     stopWebSocketManagerWorker();
     if(dataManagerPointer->joinable()) dataManagerPointer->join();
     if(webSocketManagerPointer->joinable()) webSocketManagerPointer->join();
 
-    std::cout << color("log") << "\nServer stopped gracefully!\n";
+    std::cout << color("log") << "\nServer stopped gracefully!\n" << std::flush;
 }
 
 void handleSignal(int signal) {
