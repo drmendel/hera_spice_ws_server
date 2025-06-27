@@ -4,18 +4,29 @@
 // Standard C++ Libraries
 #include <string>
 
+// ─────────────────────────────────────────────
+// Compile options
+// ─────────────────────────────────────────────
+#define DOCKER
 // #define DEBUG
-// #define DOCKER
 
+// ─────────────────────────────────────────────
+// Error options
+// ─────────────────────────────────────────────
 #define SUCCESSFUL_EXIT 0
 #define ERR_INVALID_ARGUMENTS 1
 #define ERR_SOCKET_NULL 2
 #define ERR_FORCED_SHUTDOWN 3
 
+// ─────────────────────────────────────────────
+// Defined values
+// ─────────────────────────────────────────────
 #define NO_VERSION "no_version"
-
 #define EXPECTED_MESSAGE_LENGTH 13
 
+// ─────────────────────────────────────────────
+// Utility functions
+// ─────────────────────────────────────────────
 void loadValues(int argc, char** argv, int& port, int& syncInterval);
 void checkArgc(int argc, char** argv);
 void printUsage(char** argv);

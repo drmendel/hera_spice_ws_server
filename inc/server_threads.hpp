@@ -15,11 +15,11 @@
 // ─────────────────────────────────────────────
 
 /*  
- * Periodically checks for a new Hera kernel version every 'hoursToWait' hours.  
+ * Periodically checks for a new Hera kernel version every 'syncInterval' seconds.  
  * If an update is available, downloads, extracts, modifies and replaces the kernel files.  
  * Ensures thread-safe updates by signaling data availability changes.
  */
-void dataManagerWorker(int hoursToWait);
+void dataManagerWorker(int syncInterval);
 
 // ─────────────────────────────────────────────
 // uWebSocket Thread - WebSocketManager

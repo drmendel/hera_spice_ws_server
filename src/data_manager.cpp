@@ -1,29 +1,29 @@
 // C++ Standard Library
-#include <filesystem>               // File path and directory handling (create_directories, current_path)
-#include <algorithm>                // Utility algorithms (max)
-#include <iostream>                 // Console input/output (cout, cerr)
-#include <fstream>                  // File reading and writing
-#include <cstring>                  // String manipulation (strlen)
-#include <vector>                   // Dynamic array storage
-#include <array>                    // Fixed-size data storage
+#include <filesystem>
+#include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <vector>
+#include <array>
 
 // System Libraries
 #ifdef __linux__
-    #include <sys/ioctl.h>          // Terminal width retrieval (ioctl, winsize)
-    #include <unistd.h>             // File and terminal operations (STDOUT_FILENO)
-    #include <limits.h>             // Path length limits (PATH_MAX)
-    #include <libgen.h>             // Path manipulation (dirname)
+    #include <sys/ioctl.h>
+    #include <unistd.h>
+    #include <limits.h>
+    #include <libgen.h>
 #endif
 
 // External Libraries
-#include <minizip/unzip.h>          // ZIP extraction (unzFile, unzOpen, unzReadCurrentFile)
-#include <curl/curl.h>              // Network requests (file downloads, update checks)
+#include <minizip/unzip.h>
+#include <curl/curl.h>
 
 // Project Headers
-#include <websocket_manager.hpp>    // WebSocket connection management (ConnectionIDAllocator, PerSocketData)
-#include <data_manager.hpp>         // DataManager class and function definitions
-#include <spice_core.hpp>           // SPICE kernel management (initSpiceCore, deinitSpiceCore)
-#include <utils.hpp>                // Utility function (color)
+#include <websocket_manager.hpp>
+#include <data_manager.hpp>
+#include <spice_core.hpp>
+#include <utils.hpp>
 
 
 
@@ -46,7 +46,7 @@ std::string getDefaultSaveDir() {
         perror("readlink");
         return "";
     }
-    exePath[len] = '\0';  // Null-terminate the string
+    exePath[len] = '\0';                            // Null-terminate the string
     return std::string(dirname(dirname(exePath)));  // Get the parent of the executable's directory
 }
 
