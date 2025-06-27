@@ -6,6 +6,12 @@
 #include <utils.hpp>
 #include <server_threads.hpp>
 
+
+
+// ─────────────────────────────────────────────
+// Utility functions
+// ─────────────────────────────────────────────
+
 void checkArgc(int argc, char** argv) {
     if (argc < 3) {
         printUsage(argv);
