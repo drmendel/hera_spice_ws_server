@@ -197,6 +197,9 @@ void initSpiceCore() {
     furnsh_c(cremaMetakernel.c_str());
     furnsh_c(operationalMetakernel.c_str());
     furnsh_c(planMetakernel.c_str());
+
+    erract_c("SET", 0, const_cast<SpiceChar*>("RETURN"));
+    errprt_c("SET", 0, const_cast<SpiceChar*>("NONE"));
 }
 
 void deinitSpiceCore() {
