@@ -1,12 +1,12 @@
-# 
+#
 #   Copyright 2025 Mendel Dobondi-Reisz
-# 
+#
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
-# 
+#
 #       http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #   Unless required by applicable law or agreed to in writing, software
 #   distributed under the License is distributed on an "AS IS" BASIS,
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,7 +15,7 @@
 #
 
 cmake_minimum_required(VERSION 3.16)
-project(hera_spice_websocket_server)
+project(hera_spice_ws_server)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -76,13 +76,13 @@ find_library(MINIZIP_LIB minizip REQUIRED)
 
 # Add executable
 file(GLOB_RECURSE SRC_FILES src/*.c src/*.cpp)
-add_executable(hera_spice_websocket_server ${SRC_FILES})
+add_executable(hera_spice_ws_server ${SRC_FILES})
 
 # Add include directories (modern approach)
-target_include_directories(hera_spice_websocket_server PRIVATE ${CSPICE_INCLUDE_DIR} ${uWEBSOCKET_INCLUDE_DIR} inc)
+target_include_directories(hera_spice_ws_server PRIVATE ${CSPICE_INCLUDE_DIR} ${uWEBSOCKET_INCLUDE_DIR} inc)
 
 # Link libraries (CSPICE before system libs)
-target_link_libraries(hera_spice_websocket_server PRIVATE ${CSPICE_LIB} ${CSPLIB_LIB} m ${uWEBSOCKET_LIB} CURL::libcurl ${MINIZIP_LIB} OpenSSL::Crypto ZLIB::ZLIB ssl crypto zstd)
+target_link_libraries(hera_spice_ws_server PRIVATE ${CSPICE_LIB} ${CSPLIB_LIB} m ${uWEBSOCKET_LIB} CURL::libcurl ${MINIZIP_LIB} OpenSSL::Crypto ZLIB::ZLIB ssl crypto zstd)
 
 # Install target
-install(TARGETS hera_spice_websocket_server DESTINATION bin)
+install(TARGETS hera_spice_ws_server DESTINATION bin)
