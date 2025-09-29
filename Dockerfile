@@ -17,16 +17,35 @@
 # Stage 1: Build
 FROM alpine:latest AS builder
 
-RUN apk add --no-cache g++ cmake make git openssl-dev zlib-dev curl-dev wget tar gzip zstd-dev
+RUN apk add --no-cache g++ cmake make git openssl-dev zlib-dev curl-dev wget tar gzip zstd-dev tcsh
 
 # CSPICE
-RUN wget https://naif.jpl.nasa.gov/pub/naif/toolkit//C/PC_Linux_GCC_64bit/packages/cspice.tar.Z && \
-    tar -xvf cspice.tar.Z && \
-    mkdir -p /usr/local/include/cspice && \
-    cp -r cspice/include/* /usr/local/include/cspice/ && \
-    mkdir -p /usr/local/lib/cspice && \
-    cp -r cspice/lib/* /usr/local/lib/cspice/ && \
-    rm -rf cspice*
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        echo "Installing CSPICE for AMD64..." && \
+        wget https://naif.jpl.nasa.gov/pub/naif/toolkit//C/PC_Linux_GCC_64bit/packages/cspice.tar.Z && \
+        tar -xvf cspice.tar.Z && \
+        mkdir -p /usr/local/include/cspice && \
+        cp -r cspice/include/* /usr/local/include/cspice/ && \
+        mkdir -p /usr/local/lib/cspice && \
+        cp -r cspice/lib/* /usr/local/lib/cspice/ && \
+        rm -rf cspice*; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        echo "Installing CSPICE for ARM64..." && \
+        wget https://naif.jpl.nasa.gov/pub/naif/toolkit//C/PC_Linux_GCC_64bit/packages/cspice.tar.Z && \
+        tar -xvf cspice.tar.Z && \
+        cd cspice && \
+        sed -i 's/-m64//g' src/*/mkprodct.csh && \
+        ./makeall.csh && \
+        cd .. && \
+    	mkdir -p /usr/local/include/cspice && \
+    	cp -r cspice/include/* /usr/local/include/cspice/ && \
+    	mkdir -p /usr/local/lib/cspice && \
+    	cp -r cspice/lib/* /usr/local/lib/cspice/ && \
+    	rm -rf cspice*; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi
 
 # uWebSockets
 RUN git clone --recurse-submodules https://github.com/uNetworking/uWebSockets.git && \
@@ -47,7 +66,7 @@ WORKDIR /app
 COPY inc ./inc
 COPY src ./src
 COPY CMakeLists.txt .
-RUN cmake -B build -S . -DDOCKER=1 && cmake --build build -j$(nproc)
+RUN cmake -B build -S . -DDOCKER=1 && cmake --build build -j$(nproc) && ls build && sleep 3
 
 # Stage 2: Final image
 FROM alpine:latest
@@ -60,10 +79,10 @@ COPY --from=builder /usr/local/lib/libminizip.* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libcrypto* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libssl* /usr/local/lib/
 COPY --from=builder /usr/local/lib/uSockets.a /usr/local/lib/
-COPY --from=builder /app/build/hera_spice_websocket_server /app/hera_spice_websocket_server
+COPY --from=builder /app/build/hera_spice_ws_server /app/hera_spice_ws_server
 
-ENV PORT 80
-ENV SYNC_INTERVAL 3600
+ENV PORT=80
+ENV SYNC_INTERVAL=3600
 EXPOSE $PORT
 
-CMD /app/hera_spice_websocket_server $PORT $SYNC_INTERVAL
+CMD /app/hera_spice_ws_server $PORT $SYNC_INTERVAL
