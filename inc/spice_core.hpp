@@ -43,7 +43,7 @@ const std::unordered_map<SpiceInt, std::string_view> objects = {
     {-658031, "DIMORPHOS"},
     {-91900, "DART_IMPACT_SITE"},
     {-91000, "HERA_SPACECRAFT"},
-    {-15513000, "JUVENTAS_SPACECRAFT"},
+    {-9101000, "JUVENTAS_SPACECRAFT"},
     {-9102000, "MILANI_SPACECRAFT"}
 };
 
