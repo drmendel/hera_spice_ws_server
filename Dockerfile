@@ -36,7 +36,7 @@ RUN ARCH=$(uname -m) && \
         tar -xvf cspice.tar.Z && \
         cd cspice && \
         sed -i 's/-m64//g' src/*/mkprodct.csh && \
-        ./makeall.csh && \
+        tcsh -v ./makeall.csh && \
         cd .. && \
     	mkdir -p /usr/local/include/cspice && \
     	cp -r cspice/include/* /usr/local/include/cspice/ && \
